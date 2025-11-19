@@ -60,8 +60,8 @@ export default function DeliveriesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Deliveries</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-4xl font-heading font-bold text-foreground">Deliveries</h1>
+          <p className="text-muted-foreground mt-2">
             Manage your Pickup Mtaani deliveries
           </p>
         </div>

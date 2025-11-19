@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/client'
 import { Save } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState({
@@ -50,7 +52,6 @@ export default function SettingsPage() {
     try {
       const supabase = createClient()
 
-      // Save each setting
       for (const [key, value] of Object.entries(settings)) {
         await supabase
           .from('settings')
@@ -70,74 +71,83 @@ export default function SettingsPage() {
   }
 
   if (loading) {
-    return <div className="text-center py-12">Loading settings...</div>
+    return (
+      <div className="space-y-6">
+        <div className="h-12 w-64 bg-secondary rounded-lg animate-pulse" />
+        <div className="bg-background rounded-2xl border border-border p-6">
+          <div className="space-y-4">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-16 bg-secondary rounded-lg animate-pulse" />
+            ))}
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div>
-      <div className="mb-6 flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Settings</h1>
-        <button
+    <div className="space-y-6">
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-4xl font-heading font-bold text-foreground">Settings</h1>
+          <p className="text-muted-foreground mt-2">Configure store settings and preferences</p>
+        </div>
+        <Button
           onClick={handleSaveSettings}
           disabled={saving}
-          className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800 flex items-center gap-2 disabled:opacity-50"
+          className="bg-blue-600 hover:bg-blue-700 text-white"
         >
-          <Save size={20} />
+          <Save className="h-4 w-4 mr-2" />
           {saving ? 'Saving...' : 'Save Settings'}
-        </button>
+        </Button>
       </div>
 
       {/* General Settings */}
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <h2 className="text-2xl font-bold mb-4">General Settings</h2>
+      <div className="bg-background rounded-2xl border border-border p-6">
+        <h2 className="text-2xl font-heading font-bold text-foreground mb-6">General Settings</h2>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-2">Site Name</label>
-            <input
+            <label className="block text-sm font-medium mb-2 text-foreground">Site Name</label>
+            <Input
               type="text"
               value={settings.site_name}
               onChange={(e) => setSettings({ ...settings, site_name: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Email</label>
-              <input
+              <label className="block text-sm font-medium mb-2 text-foreground">Email</label>
+              <Input
                 type="email"
                 value={settings.site_email}
                 onChange={(e) => setSettings({ ...settings, site_email: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Phone</label>
-              <input
+              <label className="block text-sm font-medium mb-2 text-foreground">Phone</label>
+              <Input
                 type="tel"
                 value={settings.phone}
                 onChange={(e) => setSettings({ ...settings, phone: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
               />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Currency</label>
-              <input
+              <label className="block text-sm font-medium mb-2 text-foreground">Currency</label>
+              <Input
                 type="text"
                 value={settings.currency}
                 onChange={(e) => setSettings({ ...settings, currency: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Tax Rate (%)</label>
-              <input
+              <label className="block text-sm font-medium mb-2 text-foreground">Tax Rate (%)</label>
+              <Input
                 type="number"
                 step="0.1"
                 value={settings.tax_rate}
                 onChange={(e) => setSettings({ ...settings, tax_rate: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
               />
             </div>
           </div>
@@ -145,9 +155,9 @@ export default function SettingsPage() {
       </div>
 
       {/* Payment Methods */}
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <h2 className="text-2xl font-bold mb-4">Payment Methods</h2>
-        <div className="space-y-2">
+      <div className="bg-background rounded-2xl border border-border p-6">
+        <h2 className="text-2xl font-heading font-bold text-foreground mb-6">Payment Methods</h2>
+        <div className="space-y-3">
           {['mpesa', 'pod', 'bank_transfer'].map(method => (
             <label key={method} className="flex items-center">
               <input
@@ -167,18 +177,18 @@ export default function SettingsPage() {
                     })
                   }
                 }}
-                className="w-4 h-4 mr-2"
+                className="w-4 h-4 mr-3 border-border"
               />
-              <span className="capitalize">{method.replace('_', ' ')}</span>
+              <span className="capitalize text-foreground">{method.replace('_', ' ')}</span>
             </label>
           ))}
         </div>
       </div>
 
       {/* Shipping Methods */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-2xl font-bold mb-4">Shipping Methods</h2>
-        <div className="space-y-2">
+      <div className="bg-background rounded-2xl border border-border p-6">
+        <h2 className="text-2xl font-heading font-bold text-foreground mb-6">Shipping Methods</h2>
+        <div className="space-y-3">
           {['home_delivery', 'pickup_mtaani'].map(method => (
             <label key={method} className="flex items-center">
               <input
@@ -198,9 +208,9 @@ export default function SettingsPage() {
                     })
                   }
                 }}
-                className="w-4 h-4 mr-2"
+                className="w-4 h-4 mr-3 border-border"
               />
-              <span className="capitalize">{method.replace('_', ' ')}</span>
+              <span className="capitalize text-foreground">{method.replace('_', ' ')}</span>
             </label>
           ))}
         </div>

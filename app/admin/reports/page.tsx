@@ -86,17 +86,27 @@ export default function ReportsPage() {
   }
 
   if (loading) {
-    return <div className="text-center py-12">Loading reports...</div>
+    return (
+      <div className="space-y-6">
+        <div className="h-12 w-64 bg-secondary rounded-lg animate-pulse" />
+        <div className="bg-background rounded-2xl border border-border p-6">
+          <div className="h-64 bg-secondary rounded-lg animate-pulse" />
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div>
-      <div className="mb-6 flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Reports & Analytics</h1>
+    <div className="space-y-6">
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-4xl font-heading font-bold text-foreground">Reports</h1>
+          <p className="text-muted-foreground mt-2">Analytics and performance insights</p>
+        </div>
         <select
           value={dateRange}
           onChange={(e) => setDateRange(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
+          className="px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-blue-600"
         >
           <option value="7days">Last 7 Days</option>
           <option value="30days">Last 30 Days</option>
@@ -106,8 +116,8 @@ export default function ReportsPage() {
       </div>
 
       {/* Sales Chart */}
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <h2 className="text-xl font-bold mb-4">Sales Revenue</h2>
+      <div className="bg-background rounded-2xl border border-border p-6">
+        <h2 className="text-xl font-heading font-bold text-foreground mb-6">Sales Revenue</h2>
         {salesData.length > 0 ? (
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={salesData}>
@@ -115,17 +125,17 @@ export default function ReportsPage() {
               <XAxis dataKey="date" />
               <YAxis />
               <Tooltip formatter={(value) => `KSh ${value.toLocaleString()}`} />
-              <Line type="monotone" dataKey="amount" stroke="#000" />
+              <Line type="monotone" dataKey="amount" stroke="#2563eb" strokeWidth={2} />
             </LineChart>
           </ResponsiveContainer>
         ) : (
-          <p className="text-gray-500">No sales data available</p>
+          <p className="text-muted-foreground">No sales data available</p>
         )}
       </div>
 
       {/* User Activity Chart */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-bold mb-4">User Registrations</h2>
+      <div className="bg-background rounded-2xl border border-border p-6">
+        <h2 className="text-xl font-heading font-bold text-foreground mb-6">User Registrations</h2>
         {userActivityData.length > 0 ? (
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={userActivityData}>
@@ -133,11 +143,11 @@ export default function ReportsPage() {
               <XAxis dataKey="date" />
               <YAxis />
               <Tooltip />
-              <Bar dataKey="count" fill="#000" />
+              <Bar dataKey="count" fill="#2563eb" />
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <p className="text-gray-500">No activity data available</p>
+          <p className="text-muted-foreground">No activity data available</p>
         )}
       </div>
     </div>

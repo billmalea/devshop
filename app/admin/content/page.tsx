@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/client'
 import { Save } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 interface ContentRow {
   section: string
@@ -43,7 +45,6 @@ export default function ContentPage() {
 
       if (error) throw error
 
-      // Parse content data
       const parsedContent = {
         hero_banner: { title: '', description: '', image_url: '', button_text: '', button_link: '' },
         about_us: { description: '' },
@@ -77,7 +78,6 @@ export default function ContentPage() {
     try {
       const supabase = createClient()
 
-      // Update hero banner
       await supabase
         .from('content')
         .upsert([
@@ -91,7 +91,6 @@ export default function ContentPage() {
           }
         ], { onConflict: 'section' })
 
-      // Update about us
       await supabase
         .from('content')
         .upsert([
@@ -111,42 +110,55 @@ export default function ContentPage() {
   }
 
   if (loading) {
-    return <div className="text-center py-12">Loading content...</div>
+    return (
+      <div className="space-y-6">
+        <div className="h-12 w-64 bg-secondary rounded-lg animate-pulse" />
+        <div className="bg-background rounded-2xl border border-border p-6">
+          <div className="space-y-4">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-16 bg-secondary rounded-lg animate-pulse" />
+            ))}
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div>
-      <div className="mb-6 flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Content Management</h1>
-        <button
+    <div className="space-y-6">
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-4xl font-heading font-bold text-foreground">Content</h1>
+          <p className="text-muted-foreground mt-2">Manage website content and banners</p>
+        </div>
+        <Button
           onClick={handleSaveContent}
           disabled={saving}
-          className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800 flex items-center gap-2 disabled:opacity-50"
+          className="bg-blue-600 hover:bg-blue-700 text-white"
         >
-          <Save size={20} />
+          <Save className="h-4 w-4 mr-2" />
           {saving ? 'Saving...' : 'Save Changes'}
-        </button>
+        </Button>
       </div>
 
       {/* Hero Banner Section */}
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <h2 className="text-2xl font-bold mb-4">Hero Banner</h2>
+      <div className="bg-background rounded-2xl border border-border p-6">
+        <h2 className="text-2xl font-heading font-bold text-foreground mb-6">Hero Banner</h2>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-2">Title</label>
-            <input
+            <label className="block text-sm font-medium mb-2 text-foreground">Title</label>
+            <Input
               type="text"
               value={content.hero_banner.title}
               onChange={(e) => setContent({
                 ...content,
                 hero_banner: { ...content.hero_banner, title: e.target.value }
               })}
-              className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
               placeholder="Hero title"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">Description</label>
+            <label className="block text-sm font-medium mb-2 text-foreground">Description</label>
             <textarea
               value={content.hero_banner.description}
               onChange={(e) => setContent({
@@ -154,47 +166,44 @@ export default function ContentPage() {
                 hero_banner: { ...content.hero_banner, description: e.target.value }
               })}
               rows={4}
-              className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
+              className="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-blue-600"
               placeholder="Hero description"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">Image URL</label>
-            <input
+            <label className="block text-sm font-medium mb-2 text-foreground">Image URL</label>
+            <Input
               type="text"
               value={content.hero_banner.image_url}
               onChange={(e) => setContent({
                 ...content,
                 hero_banner: { ...content.hero_banner, image_url: e.target.value }
               })}
-              className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
               placeholder="https://..."
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Button Text</label>
-              <input
+              <label className="block text-sm font-medium mb-2 text-foreground">Button Text</label>
+              <Input
                 type="text"
                 value={content.hero_banner.button_text}
                 onChange={(e) => setContent({
                   ...content,
                   hero_banner: { ...content.hero_banner, button_text: e.target.value }
                 })}
-                className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
                 placeholder="Shop Now"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Button Link</label>
-              <input
+              <label className="block text-sm font-medium mb-2 text-foreground">Button Link</label>
+              <Input
                 type="text"
                 value={content.hero_banner.button_link}
                 onChange={(e) => setContent({
                   ...content,
                   hero_banner: { ...content.hero_banner, button_link: e.target.value }
                 })}
-                className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
                 placeholder="/products"
               />
             </div>
@@ -203,10 +212,10 @@ export default function ContentPage() {
       </div>
 
       {/* About Us Section */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-2xl font-bold mb-4">About Us</h2>
+      <div className="bg-background rounded-2xl border border-border p-6">
+        <h2 className="text-2xl font-heading font-bold text-foreground mb-6">About Us</h2>
         <div>
-          <label className="block text-sm font-medium mb-2">Description</label>
+          <label className="block text-sm font-medium mb-2 text-foreground">Description</label>
           <textarea
             value={content.about_us.description}
             onChange={(e) => setContent({
@@ -214,7 +223,7 @@ export default function ContentPage() {
               about_us: { description: e.target.value }
             })}
             rows={6}
-            className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
+            className="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-blue-600"
             placeholder="About us content..."
           />
         </div>

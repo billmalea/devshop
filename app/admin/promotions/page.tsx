@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/client'
-import { Trash2, Edit2, Plus } from 'lucide-react'
+import { Trash2, Edit2, Plus, Tag } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 interface Promotion {
   id: string
@@ -129,159 +131,169 @@ export default function PromotionsPage() {
   }
 
   if (loading) {
-    return <div className="text-center py-12">Loading promotions...</div>
+    return (
+      <div className="space-y-6">
+        <div className="h-12 w-64 bg-secondary rounded-lg animate-pulse" />
+        <div className="bg-background rounded-2xl border border-border p-6">
+          <div className="space-y-4">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-16 bg-secondary rounded-lg animate-pulse" />
+            ))}
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div>
-      <div className="mb-6 flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Promotional Tools</h1>
-        <button
+    <div className="space-y-6">
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-4xl font-heading font-bold text-foreground">Promotions</h1>
+          <p className="text-muted-foreground mt-2">Create and manage discount codes</p>
+        </div>
+        <Button
           onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800 flex items-center gap-2"
+          className="bg-blue-600 hover:bg-blue-700 text-white"
         >
-          <Plus size={20} />
+          <Plus className="h-4 w-4 mr-2" />
           Create Promotion
-        </button>
+        </Button>
       </div>
 
       {/* Create Promo Form */}
       {showForm && (
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-xl font-bold mb-4">Create New Promotion</h2>
+        <div className="bg-background rounded-2xl border border-border p-6">
+          <h2 className="text-2xl font-heading font-bold text-foreground mb-6">Create New Promotion</h2>
           <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
-            <input
+            <Input
               type="text"
               placeholder="Promo Code (e.g., SUMMER20)"
               value={formData.code}
               onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-              className="col-span-2 px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
+              className="col-span-2"
               required
             />
             <textarea
               placeholder="Description"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="col-span-2 px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
+              className="col-span-2 px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-blue-600"
               rows={2}
             />
             <select
               value={formData.discount_type}
               onChange={(e) => setFormData({ ...formData, discount_type: e.target.value })}
-              className="px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
+              className="px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-blue-600"
             >
               <option value="percentage">Percentage (%)</option>
               <option value="fixed">Fixed Amount</option>
             </select>
-            <input
+            <Input
               type="number"
               step="0.01"
               placeholder="Discount Value"
               value={formData.discount_value}
               onChange={(e) => setFormData({ ...formData, discount_value: e.target.value })}
-              className="px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
               required
             />
-            <input
+            <Input
               type="number"
               step="0.01"
               placeholder="Min Purchase Amount (optional)"
               value={formData.min_purchase_amount}
               onChange={(e) => setFormData({ ...formData, min_purchase_amount: e.target.value })}
-              className="px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
             />
-            <input
+            <Input
               type="number"
               placeholder="Max Uses (optional)"
               value={formData.max_uses}
               onChange={(e) => setFormData({ ...formData, max_uses: e.target.value })}
-              className="px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
             />
-            <input
+            <Input
               type="datetime-local"
               placeholder="Start Date"
               value={formData.start_date}
               onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-              className="px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
             />
-            <input
+            <Input
               type="datetime-local"
               placeholder="End Date"
               value={formData.end_date}
               onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-              className="px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
             />
             <div className="col-span-2 flex gap-2">
-              <button type="submit" className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800">
+              <Button type="submit" className="bg-foreground text-background hover:bg-foreground/90">
                 Create Promotion
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="px-4 py-2 bg-gray-300 text-black rounded hover:bg-gray-400"
+                variant="outline"
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           </form>
         </div>
       )}
 
       {/* Promotions Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-background rounded-2xl border border-border overflow-hidden">
         <table className="w-full">
-          <thead className="bg-gray-100 border-b">
+          <thead className="bg-secondary/50 border-b border-border">
             <tr>
-              <th className="px-6 py-3 text-left text-sm font-semibold">Code</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold">Discount</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold">Uses</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold">Status</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold">Valid Until</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold">Actions</th>
+              <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Code</th>
+              <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Discount</th>
+              <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Uses</th>
+              <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Status</th>
+              <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Valid Until</th>
+              <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Actions</th>
             </tr>
           </thead>
           <tbody>
             {promotions.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
                   No promotions yet
                 </td>
               </tr>
             ) : (
               promotions.map((promo) => (
-                <tr key={promo.id} className="border-b hover:bg-gray-50">
-                  <td className="px-6 py-4 font-bold text-lg">{promo.code}</td>
-                  <td className="px-6 py-4">
+                <tr key={promo.id} className="border-b border-border hover:bg-secondary/30 transition-colors">
+                  <td className="px-6 py-4 font-bold text-lg text-foreground">{promo.code}</td>
+                  <td className="px-6 py-4 text-foreground">
                     {promo.discount_value}{promo.discount_type === 'percentage' ? '%' : ' KSh'}
                   </td>
-                  <td className="px-6 py-4 text-sm">
+                  <td className="px-6 py-4 text-sm text-muted-foreground">
                     {promo.uses_count}/{promo.max_uses || '∞'}
                   </td>
                   <td className="px-6 py-4">
                     <button
                       onClick={() => togglePromoStatus(promo)}
-                      className={`px-3 py-1 rounded text-sm font-medium ${
-                        promo.is_active
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}
+                      className={`px-3 py-1 rounded-full text-xs font-medium ${promo.is_active
+                          ? 'bg-green-500/10 text-green-600'
+                          : 'bg-secondary text-muted-foreground'
+                        }`}
                     >
                       {promo.is_active ? 'Active' : 'Inactive'}
                     </button>
                   </td>
-                  <td className="px-6 py-4 text-sm">
+                  <td className="px-6 py-4 text-sm text-muted-foreground">
                     {promo.end_date ? new Date(promo.end_date).toLocaleDateString() : 'N/A'}
                   </td>
                   <td className="px-6 py-4 flex gap-2">
-                    <button className="p-2 hover:bg-gray-200 rounded">
+                    <Button variant="ghost" size="icon" className="hover:bg-blue-500/10 hover:text-blue-600">
                       <Edit2 size={18} />
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       onClick={() => handleDeletePromotion(promo.id)}
-                      className="p-2 hover:bg-red-200 rounded text-red-600"
+                      variant="ghost"
+                      size="icon"
+                      className="hover:bg-red-500/10 hover:text-red-600"
                     >
                       <Trash2 size={18} />
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               ))
@@ -290,7 +302,7 @@ export default function PromotionsPage() {
         </table>
       </div>
 
-      <div className="mt-4 text-sm text-gray-600">
+      <div className="text-sm text-muted-foreground">
         Showing {promotions.length} promotions
       </div>
     </div>

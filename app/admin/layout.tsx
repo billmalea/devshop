@@ -34,7 +34,7 @@ export default function AdminLayout({
           .select('*')
           .eq('id', authUser.id)
           .eq('is_active', true)
-          .single()
+          .maybeSingle()
 
         if (error || !adminUser) {
           router.push('/')

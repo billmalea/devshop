@@ -3,13 +3,24 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/client'
 import { Trash2, Edit2, Search, Plus } from 'lucide-react'
-import Link from 'next/link'
+
+interface Product {
+  id: string
+  name: string
+  description?: string
+  price: number
+  category: string
+  brand: string
+  image_url?: string
+  stock: number
+  created_at?: string
+}
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState([])
+  const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [filteredProducts, setFilteredProducts] = useState([])
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
@@ -51,7 +62,7 @@ export default function ProductsPage() {
     setFilteredProducts(filtered)
   }, [searchTerm, products])
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
       const supabase = createClient()
@@ -78,7 +89,7 @@ export default function ProductsPage() {
     }
   }
 
-  const handleDeleteProduct = async (productId) => {
+  const handleDeleteProduct = async (productId: string) => {
     if (!confirm('Delete this product?')) return
     
     try {
@@ -232,7 +243,7 @@ export default function ProductsPage() {
                   <td className="px-6 py-4 font-medium">{product.name}</td>
                   <td className="px-6 py-4">{product.brand}</td>
                   <td className="px-6 py-4">{product.category}</td>
-                  <td className="px-6 py-4">KSh {parseFloat(product.price).toLocaleString()}</td>
+                  <td className="px-6 py-4">KSh {product.price.toLocaleString()}</td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 rounded text-sm ${product.stock < 5 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
                       {product.stock}

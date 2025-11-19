@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useCart } from "@/components/cart-provider"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner"
 import { Loader2, CheckCircle2, Truck, MapPin, Smartphone, Banknote } from 'lucide-react'
 import Link from "next/link"
+import { createClient as createBrowserSupabase } from "@/lib/client"
 
 // Mock Pickup Mtaani locations
 const PICKUP_LOCATIONS = [
@@ -27,17 +28,66 @@ export default function CheckoutPage() {
   const { items, totalPrice, clearCart } = useCart()
   const [isLoading, setIsLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
+  const [email, setEmail] = useState("")
   const [phoneNumber, setPhoneNumber] = useState("")
+  const [address, setAddress] = useState("")
+  const [city, setCity] = useState("")
+  const [postalCode, setPostalCode] = useState("")
   
   const [shippingMethod, setShippingMethod] = useState<"delivery" | "pickup">("delivery")
   const [paymentMethod, setPaymentMethod] = useState<"mpesa" | "cod">("mpesa")
   const [pickupLocation, setPickupLocation] = useState("")
+  const [profilePhonePresent, setProfilePhonePresent] = useState(false)
 
   const formattedTotal = new Intl.NumberFormat('en-KE', {
     style: 'currency',
     currency: 'KES',
     minimumFractionDigits: 0,
   }).format(totalPrice)
+
+  // Prefill from Supabase profile
+  useEffect(() => {
+    const prefill = async () => {
+      try {
+        const supabase = createBrowserSupabase()
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
+        if (!user) return
+
+        // Email
+        if (user.email) setEmail((prev) => prev || user.email!)
+
+        // Fetch profile
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name, phone_number")
+          .eq("id", user.id)
+          .maybeSingle()
+
+        // Name handling
+        const meta = (user.user_metadata as { full_name?: string } | null) || null
+        const fullName = profile?.full_name || meta?.full_name || ""
+        if (fullName && (!firstName || !lastName)) {
+          const parts = String(fullName).trim().split(/\s+/)
+          setFirstName((prev) => prev || parts[0] || "")
+          setLastName((prev) => prev || parts.slice(1).join(" ") || "")
+        }
+
+        // Phone
+        if (profile?.phone_number) {
+          setPhoneNumber((prev) => prev || profile.phone_number!)
+          setProfilePhonePresent(true)
+        }
+      } catch (e) {
+        console.error("Prefill error", e)
+      }
+    }
+    prefill()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -55,6 +105,20 @@ export default function CheckoutPage() {
     }
 
     setIsLoading(true)
+
+    // Persist phone if newly provided and not stored
+    try {
+      if (phoneNumber && !profilePhonePresent) {
+        const supabase = createBrowserSupabase()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          await supabase.from("profiles").update({ phone_number: phoneNumber }).eq("id", user.id)
+          setProfilePhonePresent(true)
+        }
+      }
+    } catch (err) {
+      console.error("Failed to persist phone number", err)
+    }
 
     if (paymentMethod === "mpesa") {
       // Simulate M-Pesa STK Push
@@ -83,7 +147,7 @@ export default function CheckoutPage() {
             ? "Thank you for your purchase. You will receive an M-Pesa confirmation shortly." 
             : "Thank you for your order. Please have the exact amount ready upon delivery/pickup."}
           <br />
-          We'll start processing your order right away.
+          We&apos;ll start processing your order right away.
         </p>
         <Button asChild className="mt-8" size="lg">
           <Link href="/products">Continue Shopping</Link>
@@ -119,16 +183,35 @@ export default function CheckoutPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="firstName">First Name</Label>
-                  <Input id="firstName" placeholder="John" required />
+                  <Input
+                    id="firstName"
+                    placeholder="John"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="lastName">Last Name</Label>
-                  <Input id="lastName" placeholder="Doe" required />
+                  <Input
+                    id="lastName"
+                    placeholder="Doe"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    required
+                  />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="john@example.com" required />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="john@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone Number</Label>
@@ -180,16 +263,33 @@ export default function CheckoutPage() {
                 <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
                   <div className="space-y-2">
                     <Label htmlFor="address">Delivery Address</Label>
-                    <Input id="address" placeholder="Street, Building, Apartment" required />
+                    <Input
+                      id="address"
+                      placeholder="Street, Building, Apartment"
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      required
+                    />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="city">City</Label>
-                      <Input id="city" placeholder="Nairobi" required />
+                      <Input
+                        id="city"
+                        placeholder="Nairobi"
+                        value={city}
+                        onChange={(e) => setCity(e.target.value)}
+                        required
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="postalCode">Postal Code</Label>
-                      <Input id="postalCode" placeholder="00100" />
+                      <Input
+                        id="postalCode"
+                        placeholder="00100"
+                        value={postalCode}
+                        onChange={(e) => setPostalCode(e.target.value)}
+                      />
                     </div>
                   </div>
                 </div>

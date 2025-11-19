@@ -4,12 +4,21 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/client'
 import { Search, Eye } from 'lucide-react'
 
+interface Order {
+  id: string
+  status: string
+  phone_number?: string
+  total_amount: number
+  payment_method?: string
+  created_at: string
+}
+
 export default function OrdersPage() {
-  const [orders, setOrders] = useState([])
+  const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
-  const [filteredOrders, setFilteredOrders] = useState([])
+  const [filteredOrders, setFilteredOrders] = useState<Order[]>([])
 
   useEffect(() => {
     fetchOrders()
@@ -50,7 +59,7 @@ export default function OrdersPage() {
     setFilteredOrders(filtered)
   }, [searchTerm, statusFilter, orders])
 
-  const updateOrderStatus = async (orderId, newStatus) => {
+  const updateOrderStatus = async (orderId: string, newStatus: string) => {
     try {
       const supabase = createClient()
       const { error } = await supabase
@@ -67,7 +76,7 @@ export default function OrdersPage() {
     }
   }
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return 'bg-yellow-100 text-yellow-800'
       case 'processing': return 'bg-blue-100 text-blue-800'
@@ -140,7 +149,7 @@ export default function OrdersPage() {
                 <tr key={order.id} className="border-b hover:bg-gray-50">
                   <td className="px-6 py-4 font-mono text-sm">{order.id.slice(0, 8)}</td>
                   <td className="px-6 py-4">{order.phone_number}</td>
-                  <td className="px-6 py-4">KSh {parseFloat(order.total_amount).toLocaleString()}</td>
+                  <td className="px-6 py-4">KSh {parseFloat(String(order.total_amount)).toLocaleString()}</td>
                   <td className="px-6 py-4">
                     <select
                       value={order.status}

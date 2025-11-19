@@ -4,8 +4,23 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/client'
 import { Trash2, Edit2, Plus } from 'lucide-react'
 
+interface Promotion {
+  id: string
+  code: string
+  description?: string
+  discount_type: string
+  discount_value: number
+  min_purchase_amount?: number
+  max_uses?: number
+  uses_count?: number
+  start_date?: string
+  end_date?: string
+  is_active: boolean
+  created_at?: string
+}
+
 export default function PromotionsPage() {
-  const [promotions, setPromotions] = useState([])
+  const [promotions, setPromotions] = useState<Promotion[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState({
@@ -40,7 +55,7 @@ export default function PromotionsPage() {
     }
   }
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
       const supabase = createClient()
@@ -77,7 +92,7 @@ export default function PromotionsPage() {
     }
   }
 
-  const handleDeletePromotion = async (promoId) => {
+  const handleDeletePromotion = async (promoId: string) => {
     if (!confirm('Delete this promotion?')) return
 
     try {
@@ -95,7 +110,7 @@ export default function PromotionsPage() {
     }
   }
 
-  const togglePromoStatus = async (promo) => {
+  const togglePromoStatus = async (promo: Promotion) => {
     try {
       const supabase = createClient()
       const { error } = await supabase

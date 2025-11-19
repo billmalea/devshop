@@ -4,8 +4,15 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/client'
 import { AlertTriangle, TrendingDown } from 'lucide-react'
 
+interface Product {
+  id: string
+  name: string
+  category: string
+  stock: number
+}
+
 export default function InventoryPage() {
-  const [products, setProducts] = useState([])
+  const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all') // all, low, out
 
@@ -30,18 +37,18 @@ export default function InventoryPage() {
     }
   }
 
-  const updateStock = async (productId, newStock) => {
+  const updateStock = async (productId: string, newStock: string | number) => {
     try {
       const supabase = createClient()
       const { error } = await supabase
         .from('products')
-        .update({ stock: parseInt(newStock) })
+        .update({ stock: parseInt(String(newStock)) })
         .eq('id', productId)
 
       if (error) throw error
 
       setProducts(products.map(p => 
-        p.id === productId ? { ...p, stock: parseInt(newStock) } : p
+        p.id === productId ? { ...p, stock: parseInt(String(newStock)) } : p
       ))
       alert('Stock updated')
     } catch (error) {

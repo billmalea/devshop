@@ -4,6 +4,15 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/client'
 import { Save } from 'lucide-react'
 
+interface ContentRow {
+  section: string
+  title?: string
+  description?: string
+  image_url?: string
+  button_text?: string
+  button_link?: string
+}
+
 export default function ContentPage() {
   const [content, setContent] = useState({
     hero_banner: {
@@ -35,19 +44,23 @@ export default function ContentPage() {
       if (error) throw error
 
       // Parse content data
-      const parsedContent = { hero_banner: {}, about_us: {}, faqs: [] }
-      data?.forEach(item => {
+      const parsedContent = {
+        hero_banner: { title: '', description: '', image_url: '', button_text: '', button_link: '' },
+        about_us: { description: '' },
+        faqs: [],
+      }
+      data?.forEach((item: ContentRow) => {
         if (item.section === 'hero_banner') {
           parsedContent.hero_banner = {
-            title: item.title,
-            description: item.description,
-            image_url: item.image_url,
-            button_text: item.button_text,
-            button_link: item.button_link,
+            title: item.title ?? '',
+            description: item.description ?? '',
+            image_url: item.image_url ?? '',
+            button_text: item.button_text ?? '',
+            button_link: item.button_link ?? '',
           }
         }
         if (item.section === 'about_us') {
-          parsedContent.about_us = { description: item.description }
+          parsedContent.about_us = { description: item.description ?? '' }
         }
       })
 

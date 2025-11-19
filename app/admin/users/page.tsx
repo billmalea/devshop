@@ -4,11 +4,18 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/client'
 import { Trash2, Edit2, Search } from 'lucide-react'
 
+interface User {
+  id: string
+  full_name?: string
+  phone_number?: string
+  created_at: string
+}
+
 export default function UsersPage() {
-  const [users, setUsers] = useState([])
+  const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [filteredUsers, setFilteredUsers] = useState([])
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([])
 
   useEffect(() => {
     fetchUsers()
@@ -40,11 +47,10 @@ export default function UsersPage() {
     setFilteredUsers(filtered)
   }, [searchTerm, users])
 
-  const handleSuspendUser = async (userId) => {
+  const handleSuspendUser = async (userId: string) => {
     if (!confirm('Are you sure you want to suspend this user?')) return
     
     try {
-      const supabase = createClient()
       // In a real app, you'd update an is_suspended field
       console.log('Suspending user:', userId)
       // await supabase.from('profiles').update({ is_suspended: true }).eq('id', userId)
@@ -54,11 +60,10 @@ export default function UsersPage() {
     }
   }
 
-  const handleDeleteUser = async (userId) => {
+  const handleDeleteUser = async (userId: string) => {
     if (!confirm('Are you sure? This cannot be undone!')) return
     
     try {
-      const supabase = createClient()
       // This would delete the user - dangerous operation
       console.log('Deleting user:', userId)
       alert('User deleted successfully')

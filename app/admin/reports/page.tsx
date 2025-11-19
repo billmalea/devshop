@@ -4,9 +4,28 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/client'
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
+interface SalesData {
+  date: string
+  amount: number
+}
+
+interface ActivityData {
+  date: string
+  count: number
+}
+
+interface Order {
+  created_at: string
+  total_amount: number
+}
+
+interface Profile {
+  created_at: string
+}
+
 export default function ReportsPage() {
-  const [salesData, setSalesData] = useState([])
-  const [userActivityData, setUserActivityData] = useState([])
+  const [salesData, setSalesData] = useState<SalesData[]>([])
+  const [userActivityData, setUserActivityData] = useState<ActivityData[]>([])
   const [loading, setLoading] = useState(true)
   const [dateRange, setDateRange] = useState('7days')
 
@@ -27,16 +46,16 @@ export default function ReportsPage() {
       if (ordersError) throw ordersError
 
       // Process sales data
-      const sales = {}
-      ordersData?.forEach(order => {
+      const sales: Record<string, number> = {}
+      ordersData?.forEach((order: Order) => {
         const date = new Date(order.created_at).toLocaleDateString()
-        sales[date] = (sales[date] || 0) + parseFloat(order.total_amount)
+        sales[date] = (sales[date] || 0) + parseFloat(String(order.total_amount))
       })
 
       setSalesData(
         Object.entries(sales).map(([date, amount]) => ({
           date,
-          amount: parseFloat(amount)
+          amount: Number(amount)
         }))
       )
 
@@ -47,8 +66,8 @@ export default function ReportsPage() {
 
       if (profilesError) throw profilesError
 
-      const activity = {}
-      profilesData?.forEach(profile => {
+      const activity: Record<string, number> = {}
+      profilesData?.forEach((profile: Profile) => {
         const date = new Date(profile.created_at).toLocaleDateString()
         activity[date] = (activity[date] || 0) + 1
       })
@@ -56,7 +75,7 @@ export default function ReportsPage() {
       setUserActivityData(
         Object.entries(activity).map(([date, count]) => ({
           date,
-          count
+          count: Number(count)
         }))
       )
     } catch (error) {

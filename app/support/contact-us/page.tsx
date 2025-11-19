@@ -13,12 +13,12 @@ export default function ContactUsPage() {
         <div className="max-w-2xl mx-auto">
           <h1 className="text-4xl font-bold text-black mb-6">Contact Us</h1>
           <p className="text-lg text-black/70 mb-12">
-            Have questions? We're here to help! Reach out to our support team.
+            Have questions? We&apos;re here to help! Reach out to our support team.
           </p>
 
           <div className="space-y-8 mb-12">
             <div className="flex gap-4">
-              <Mail className="h-6 w-6 text-black flex-shrink-0 mt-1" />
+              <Mail className="h-6 w-6 text-black shrink-0 mt-1" />
               <div>
                 <h3 className="font-bold text-black mb-2">Email</h3>
                 <a href="mailto:support@devshop.ke" className="text-black/70 hover:text-black">
@@ -28,7 +28,7 @@ export default function ContactUsPage() {
             </div>
 
             <div className="flex gap-4">
-              <Phone className="h-6 w-6 text-black flex-shrink-0 mt-1" />
+              <Phone className="h-6 w-6 text-black shrink-0 mt-1" />
               <div>
                 <h3 className="font-bold text-black mb-2">Phone</h3>
                 <a href="tel:+254712345678" className="text-black/70 hover:text-black">
@@ -38,7 +38,7 @@ export default function ContactUsPage() {
             </div>
 
             <div className="flex gap-4">
-              <MapPin className="h-6 w-6 text-black flex-shrink-0 mt-1" />
+              <MapPin className="h-6 w-6 text-black shrink-0 mt-1" />
               <div>
                 <h3 className="font-bold text-black mb-2">Location</h3>
                 <p className="text-black/70">Nairobi, Kenya</p>

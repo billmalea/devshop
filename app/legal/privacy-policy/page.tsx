@@ -26,7 +26,7 @@ export default function PrivacyPolicyPage() {
               <h2 className="text-2xl font-bold text-black mb-3">How We Use Your Information</h2>
               <ul className="list-disc list-inside space-y-2">
                 <li>Process your orders and send related information</li>
-                <li>Send promotional emails (if you've opted in)</li>
+                <li>Send promotional emails (if you&apos;ve opted in)</li>
                 <li>Improve our website and services</li>
                 <li>Comply with legal obligations</li>
               </ul>

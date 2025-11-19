@@ -38,7 +38,7 @@ export default function ShippingInfoPage() {
             <div>
               <h2 className="text-2xl font-bold text-black mb-4">Tracking Your Order</h2>
               <p className="text-black/70 mb-4">
-                Once your order is placed, you'll receive a tracking number via email. You can use this to track your shipment in real-time.
+                Once your order is placed, you&apos;ll receive a tracking number via email. You can use this to track your shipment in real-time.
               </p>
             </div>
 

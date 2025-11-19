@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { ShoppingCart, Search, User } from 'lucide-react'
+import { Search, User } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { CartSheet } from "@/components/cart-sheet"

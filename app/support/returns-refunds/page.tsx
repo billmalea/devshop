@@ -14,7 +14,7 @@ export default function ReturnsRefundsPage() {
             <div>
               <h2 className="text-2xl font-bold text-black mb-4">Return Policy</h2>
               <p className="text-black/70 leading-relaxed mb-4">
-                We want you to be completely satisfied with your purchase. If for any reason you're not happy, we accept returns within 30 days of purchase.
+                We want you to be completely satisfied with your purchase. If for any reason you&apos;re not happy, we accept returns within 30 days of purchase.
               </p>
               <p className="text-black/70 leading-relaxed">
                 Items must be unused, unworn, and in original packaging with all tags attached.
@@ -27,7 +27,7 @@ export default function ReturnsRefundsPage() {
                 <li>Contact us at support@devshop.ke with your order number</li>
                 <li>Pack the item securely in original packaging</li>
                 <li>Use the return label provided or arrange pickup via Pickup Mtaani</li>
-                <li>Once received and inspected, we'll process your refund</li>
+                <li>Once received and inspected, we&apos;ll process your refund</li>
               </ol>
             </div>
 

@@ -36,7 +36,7 @@ export default function AdminDashboard() {
           .select('*')
 
         // Calculate total revenue
-        const totalRevenue = ordersData?.reduce((sum, order) => sum + parseFloat(order.total_amount || 0), 0) || 0
+        const totalRevenue = ordersData?.reduce((sum: number, order: { total_amount: number }) => sum + parseFloat(String(order.total_amount || 0)), 0) || 0
 
         // Fetch pending orders
         const { count: pendingCount } = await supabase

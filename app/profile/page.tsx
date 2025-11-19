@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Package, User, LogOut } from 'lucide-react'
+import { Package } from 'lucide-react'
 import { SignOutButton } from "@/components/sign-out-button"
 
 export default async function ProfilePage() {
@@ -89,7 +89,7 @@ export default async function ProfilePage() {
                       </CardHeader>
                       <CardContent>
                         <div className="mt-2 space-y-2">
-                          {order.order_items.map((item: any) => (
+                          {order.order_items.map((item: { id: string; quantity: number; products: { name: string } }) => (
                             <div key={item.id} className="flex items-center justify-between text-sm">
                               <span className="text-muted-foreground">
                                 {item.quantity}x {item.products.name}

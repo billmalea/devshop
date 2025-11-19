@@ -1,0 +1,348 @@
+"use client"
+
+import { useState } from "react"
+import { useCart } from "@/components/cart-provider"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { toast } from "sonner"
+import { Loader2, CheckCircle2, Truck, MapPin, Smartphone, Banknote } from 'lucide-react'
+import Link from "next/link"
+
+// Mock Pickup Mtaani locations
+const PICKUP_LOCATIONS = [
+  { id: "nairobi-cbd", name: "Nairobi CBD - Imenti House" },
+  { id: "westlands", name: "Westlands - The Mall" },
+  { id: "roysambu", name: "Roysambu - TRM" },
+  { id: "langata", name: "Langata - Freedom Heights" },
+  { id: "mombasa", name: "Mombasa - Nyali Centre" },
+  { id: "kisumu", name: "Kisumu - Mega City" },
+]
+
+export default function CheckoutPage() {
+  const { items, totalPrice, clearCart } = useCart()
+  const [isLoading, setIsLoading] = useState(false)
+  const [isSuccess, setIsSuccess] = useState(false)
+  const [phoneNumber, setPhoneNumber] = useState("")
+  
+  const [shippingMethod, setShippingMethod] = useState<"delivery" | "pickup">("delivery")
+  const [paymentMethod, setPaymentMethod] = useState<"mpesa" | "cod">("mpesa")
+  const [pickupLocation, setPickupLocation] = useState("")
+
+  const formattedTotal = new Intl.NumberFormat('en-KE', {
+    style: 'currency',
+    currency: 'KES',
+    minimumFractionDigits: 0,
+  }).format(totalPrice)
+
+  const handlePayment = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (shippingMethod === "pickup" && !pickupLocation) {
+      toast.error("Please select a pickup location")
+      return
+    }
+
+    if (paymentMethod === "mpesa") {
+      if (!phoneNumber.match(/^(?:254|\+254|0)?(7(?:(?:[129][0-9])|(?:0[0-8])|(4[0-1]))[0-9]{6})$/)) {
+        toast.error("Please enter a valid Safaricom number")
+        return
+      }
+    }
+
+    setIsLoading(true)
+
+    if (paymentMethod === "mpesa") {
+      // Simulate M-Pesa STK Push
+      await new Promise(resolve => setTimeout(resolve, 3000))
+      toast.success("Payment successful! Order placed.")
+    } else {
+      // Simulate COD processing
+      await new Promise(resolve => setTimeout(resolve, 1500))
+      toast.success("Order placed! Pay on delivery.")
+    }
+
+    setIsLoading(false)
+    setIsSuccess(true)
+    clearCart()
+  }
+
+  if (isSuccess) {
+    return (
+      <div className="container mx-auto flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
+        <div className="mb-6 rounded-full bg-primary/10 p-6">
+          <CheckCircle2 className="h-16 w-16 text-primary" />
+        </div>
+        <h1 className="text-3xl font-bold tracking-tighter">Order Confirmed!</h1>
+        <p className="mt-4 max-w-md text-muted-foreground">
+          {paymentMethod === "mpesa" 
+            ? "Thank you for your purchase. You will receive an M-Pesa confirmation shortly." 
+            : "Thank you for your order. Please have the exact amount ready upon delivery/pickup."}
+          <br />
+          We'll start processing your order right away.
+        </p>
+        <Button asChild className="mt-8" size="lg">
+          <Link href="/products">Continue Shopping</Link>
+        </Button>
+      </div>
+    )
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="container mx-auto flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
+        <h1 className="text-2xl font-bold">Your cart is empty</h1>
+        <p className="mt-2 text-muted-foreground">Add some items to checkout</p>
+        <Button asChild className="mt-6">
+          <Link href="/products">Browse Products</Link>
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-10">
+      <h1 className="mb-8 text-3xl font-bold tracking-tighter">Checkout</h1>
+      
+      <div className="grid gap-8 lg:grid-cols-2">
+        <div className="space-y-6">
+          <Card className="border-border/40">
+            <CardHeader>
+              <CardTitle>Contact Information</CardTitle>
+              <CardDescription>Enter your details for delivery</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name</Label>
+                  <Input id="firstName" placeholder="John" required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input id="lastName" placeholder="Doe" required />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" placeholder="john@example.com" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input 
+                  id="phone" 
+                  placeholder="07XX XXX XXX" 
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  required 
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/40">
+            <CardHeader>
+              <CardTitle>Shipping Method</CardTitle>
+              <CardDescription>Choose how you want to receive your order</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <RadioGroup 
+                value={shippingMethod} 
+                onValueChange={(value: "delivery" | "pickup") => setShippingMethod(value)}
+                className="grid grid-cols-2 gap-4"
+              >
+                <div>
+                  <RadioGroupItem value="delivery" id="delivery" className="peer sr-only" />
+                  <Label
+                    htmlFor="delivery"
+                    className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
+                  >
+                    <Truck className="mb-3 h-6 w-6" />
+                    Home Delivery
+                  </Label>
+                </div>
+                <div>
+                  <RadioGroupItem value="pickup" id="pickup" className="peer sr-only" />
+                  <Label
+                    htmlFor="pickup"
+                    className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
+                  >
+                    <MapPin className="mb-3 h-6 w-6" />
+                    Pickup Mtaani
+                  </Label>
+                </div>
+              </RadioGroup>
+
+              {shippingMethod === "delivery" ? (
+                <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Delivery Address</Label>
+                    <Input id="address" placeholder="Street, Building, Apartment" required />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="city">City</Label>
+                      <Input id="city" placeholder="Nairobi" required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="postalCode">Postal Code</Label>
+                      <Input id="postalCode" placeholder="00100" />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                  <Label htmlFor="pickup-location">Select Pickup Location</Label>
+                  <Select value={pickupLocation} onValueChange={setPickupLocation}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a Pickup Mtaani agent" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PICKUP_LOCATIONS.map((loc) => (
+                        <SelectItem key={loc.id} value={loc.id}>
+                          {loc.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Powered by Pickup Mtaani API
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/40">
+            <CardHeader>
+              <CardTitle>Payment Method</CardTitle>
+              <CardDescription>Select your preferred payment option</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handlePayment} className="space-y-6">
+                <RadioGroup 
+                  value={paymentMethod} 
+                  onValueChange={(value: "mpesa" | "cod") => setPaymentMethod(value)}
+                  className="grid grid-cols-2 gap-4"
+                >
+                  <div>
+                    <RadioGroupItem value="mpesa" id="mpesa" className="peer sr-only" />
+                    <Label
+                      htmlFor="mpesa"
+                      className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
+                    >
+                      <Smartphone className="mb-3 h-6 w-6" />
+                      M-Pesa
+                    </Label>
+                  </div>
+                  <div>
+                    <RadioGroupItem value="cod" id="cod" className="peer sr-only" />
+                    <Label
+                      htmlFor="cod"
+                      className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
+                    >
+                      <Banknote className="mb-3 h-6 w-6" />
+                      Pay on Delivery
+                    </Label>
+                  </div>
+                </RadioGroup>
+
+                {paymentMethod === "mpesa" && (
+                  <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 animate-in fade-in slide-in-from-top-2">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="flex h-10 w-16 items-center justify-center rounded bg-white p-1">
+                        <span className="text-xs font-bold text-green-600">M-PESA</span>
+                      </div>
+                      <div>
+                        <p className="font-medium">M-Pesa Express</p>
+                        <p className="text-xs text-muted-foreground">Instant payment to your phone</p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      We will send a payment prompt to <strong>{phoneNumber || "your phone number"}</strong>.
+                    </p>
+                  </div>
+                )}
+
+                {paymentMethod === "cod" && (
+                  <div className="rounded-lg border border-muted bg-muted/50 p-4 animate-in fade-in slide-in-from-top-2">
+                    <p className="text-sm text-muted-foreground">
+                      You will pay for your order when it is delivered or when you pick it up. 
+                      Please ensure you have the exact amount or M-Pesa ready.
+                    </p>
+                  </div>
+                )}
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div>
+          <Card className="sticky top-24 border-border/40 bg-secondary/10">
+            <CardHeader>
+              <CardTitle>Order Summary</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                {items.map((item) => (
+                  <div key={item.id} className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      {item.quantity}x {item.name}
+                    </span>
+                    <span>
+                      {new Intl.NumberFormat('en-KE', {
+                        style: 'currency',
+                        currency: 'KES',
+                        minimumFractionDigits: 0,
+                      }).format(item.price * item.quantity)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <Separator />
+              <div className="flex justify-between font-medium">
+                <span>Subtotal</span>
+                <span>{formattedTotal}</span>
+              </div>
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>Shipping</span>
+                <span>{shippingMethod === "pickup" ? "KES 100" : "KES 250"}</span>
+              </div>
+              <Separator />
+              <div className="flex justify-between text-lg font-bold text-primary">
+                <span>Total</span>
+                <span>
+                  {new Intl.NumberFormat('en-KE', {
+                    style: 'currency',
+                    currency: 'KES',
+                    minimumFractionDigits: 0,
+                  }).format(totalPrice + (shippingMethod === "pickup" ? 100 : 250))}
+                </span>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button 
+                className="w-full" 
+                size="lg" 
+                onClick={handlePayment}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  paymentMethod === "mpesa" ? `Pay Now` : `Place Order`
+                )}
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      </div>
+    </div>
+  )
+}

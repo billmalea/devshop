@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/client'
-import { Trash2, Edit2, Search, Plus } from 'lucide-react'
+import { Trash2, Edit2, Search, Plus, Sparkles, Image as ImageIcon, Grid3x3, List } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 interface Product {
   id: string
@@ -49,6 +51,7 @@ export default function ProductsPage() {
   const [showPromptInputs, setShowPromptInputs] = useState(false)
   const [descriptionPrompt, setDescriptionPrompt] = useState('')
   const [imagePrompt, setImagePrompt] = useState('')
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('table')
   const [formData, setFormData] = useState({
     name: '',
     short_description: '',
@@ -107,7 +110,7 @@ export default function ProductsPage() {
     e.preventDefault()
     try {
       const supabase = createClient()
-      
+
       const productData = {
         name: formData.name,
         short_description: formData.short_description,
@@ -149,7 +152,7 @@ export default function ProductsPage() {
         if (error) throw error
         alert('Product added successfully!')
       }
-      
+
       resetForm()
       fetchProducts()
     } catch (error) {
@@ -219,7 +222,7 @@ export default function ProductsPage() {
     setGeneratingAI(true)
     try {
       const customPrompt = type === 'description' ? descriptionPrompt : imagePrompt
-      
+
       const response = await fetch('/api/admin/products/generate-ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -262,7 +265,7 @@ export default function ProductsPage() {
 
   const handleDeleteProduct = async (productId: string) => {
     if (!confirm('Delete this product?')) return
-    
+
     try {
       const supabase = createClient()
       const { error } = await supabase
@@ -280,12 +283,12 @@ export default function ProductsPage() {
 
   if (loading && products.length === 0) {
     return (
-      <div>
-        <div className="h-8 w-48 bg-gray-200 rounded mb-6 animate-pulse" />
-        <div className="bg-white rounded-lg shadow p-6">
+      <div className="space-y-6">
+        <div className="h-12 w-64 bg-secondary rounded-lg animate-pulse" />
+        <div className="bg-background rounded-2xl border border-border p-6">
           <div className="space-y-4">
-            {[1,2,3,4,5].map(i => (
-              <div key={i} className="h-12 bg-gray-200 rounded animate-pulse" />
+            {[1, 2, 3, 4, 5].map(i => (
+              <div key={i} className="h-16 bg-secondary rounded-lg animate-pulse" />
             ))}
           </div>
         </div>
@@ -294,120 +297,143 @@ export default function ProductsPage() {
   }
 
   return (
-    <div>
-      <div className="mb-6 flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Product Management</h1>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800 flex items-center gap-2"
-        >
-          <Plus size={20} />
-          Add Product
-        </button>
+    <div className="space-y-6">
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-4xl font-heading font-bold text-foreground">Products</h1>
+          <p className="text-muted-foreground mt-2">Manage your product catalog</p>
+        </div>
+        <div className="flex gap-2">
+          <div className="flex border border-border rounded-lg p-1">
+            <Button
+              variant={viewMode === 'grid' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('grid')}
+              className={viewMode === 'grid' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+            >
+              <Grid3x3 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'table' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('table')}
+              className={viewMode === 'table' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
+          <Button
+            onClick={() => setShowForm(!showForm)}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Product
+          </Button>
+        </div>
       </div>
 
       {/* Product Form */}
       {showForm && (
-        <div className="bg-white rounded-lg shadow p-6 mb-6 max-h-[80vh] overflow-y-auto">
-          <h2 className="text-xl font-bold mb-4">{editingProduct ? 'Edit Product' : 'Add New Product'}</h2>
+        <div className="bg-background rounded-2xl border border-border p-6 max-h-[80vh] overflow-y-auto">
+          <h2 className="text-2xl font-heading font-bold text-foreground mb-6">{editingProduct ? 'Edit Product' : 'Add New Product'}</h2>
           <form onSubmit={handleSubmit} className="space-y-6">
-            
+
             {/* Basic Info */}
-            <div className="border-b pb-4">
-              <h3 className="font-semibold mb-3 text-gray-700">Basic Information</h3>
+            <div className="border-b border-border pb-6">
+              <h3 className="font-semibold mb-4 text-foreground">Basic Information</h3>
               <div className="grid grid-cols-2 gap-4">
-                <input
+                <Input
                   type="text"
                   placeholder="Product Name *"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="col-span-2 px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
+                  className="col-span-2"
                   required
                 />
-                <input
+                <Input
                   type="text"
                   placeholder="SKU (optional)"
                   value={formData.sku}
                   onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                  className="px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
                 />
-                <input
+                <Input
                   type="text"
                   placeholder="Brand *"
                   value={formData.brand}
                   onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                  className="px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
                   required
                 />
               </div>
             </div>
 
             {/* Descriptions with AI */}
-            <div className="border-b pb-4">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="font-semibold text-gray-700">Descriptions</h3>
+            <div className="border-b border-border pb-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-semibold text-foreground">Descriptions</h3>
                 <div className="flex gap-2">
-                  <button
+                  <Button
                     type="button"
                     onClick={() => setShowPromptInputs(!showPromptInputs)}
-                    className="px-3 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600"
+                    variant="outline"
+                    size="sm"
                   >
                     {showPromptInputs ? '🔽 Hide Prompts' : '⚙️ Custom Prompts'}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
                     onClick={() => generateAIContent('description')}
                     disabled={generatingAI}
-                    className="px-3 py-1 bg-purple-600 text-white text-sm rounded hover:bg-purple-700 disabled:opacity-50"
+                    size="sm"
+                    className="bg-purple-600 hover:bg-purple-700 text-white"
                   >
-                    {generatingAI ? '⏳ Generating...' : '✨ Generate with AI'}
-                  </button>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    {generatingAI ? 'Generating...' : 'Generate with AI'}
+                  </Button>
                 </div>
               </div>
-              
+
               {showPromptInputs && (
-                <div className="mb-3 p-3 bg-gray-50 rounded border">
-                  <label className="block text-sm font-medium mb-2">Custom Description Prompt (optional)</label>
+                <div className="mb-4 p-4 bg-secondary/50 rounded-xl border border-border">
+                  <label className="block text-sm font-medium mb-2 text-foreground">Custom Description Prompt (optional)</label>
                   <textarea
                     placeholder="Leave empty for default: Tech-focused description for African developers. Or customize: 'Write a funny description for gamers...'"
                     value={descriptionPrompt}
                     onChange={(e) => setDescriptionPrompt(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
                     rows={2}
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-muted-foreground mt-2">
                     💡 Default: Professional tech-focused description for African developers & engineers
                   </p>
                 </div>
               )}
 
               <div className="space-y-3">
-                <input
+                <Input
                   type="text"
                   placeholder="Short Description (150 chars max)"
                   value={formData.short_description}
                   onChange={(e) => setFormData({ ...formData, short_description: e.target.value })}
                   maxLength={150}
-                  className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
                 />
                 <textarea
                   placeholder="Long Description (detailed product info)"
                   value={formData.long_description}
                   onChange={(e) => setFormData({ ...formData, long_description: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
+                  className="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-blue-600"
                   rows={4}
                 />
               </div>
             </div>
 
             {/* Categories */}
-            <div className="border-b pb-4">
-              <h3 className="font-semibold mb-3 text-gray-700">Categories</h3>
+            <div className="border-b border-border pb-6">
+              <h3 className="font-semibold mb-4 text-foreground">Categories</h3>
               <div className="grid grid-cols-2 gap-4">
                 <select
                   value={formData.main_category}
                   onChange={(e) => setFormData({ ...formData, main_category: e.target.value })}
-                  className="px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
+                  className="px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-blue-600"
                   required
                 >
                   <option value="Apparel">Apparel</option>
@@ -416,7 +442,7 @@ export default function ProductsPage() {
                 <select
                   value={formData.sub_category}
                   onChange={(e) => setFormData({ ...formData, sub_category: e.target.value, category: e.target.value })}
-                  className="px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
+                  className="px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-blue-600"
                   required
                 >
                   <option value="">Select Sub-Category *</option>
@@ -430,32 +456,29 @@ export default function ProductsPage() {
             </div>
 
             {/* Pricing & Stock */}
-            <div className="border-b pb-4">
-              <h3 className="font-semibold mb-3 text-gray-700">Pricing & Inventory</h3>
+            <div className="border-b border-border pb-6">
+              <h3 className="font-semibold mb-4 text-foreground">Pricing & Inventory</h3>
               <div className="grid grid-cols-3 gap-4">
-                <input
+                <Input
                   type="number"
                   step="0.01"
                   placeholder="Price (KSh) *"
                   value={formData.price}
                   onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                  className="px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
                   required
                 />
-                <input
+                <Input
                   type="number"
                   placeholder="Stock Quantity *"
                   value={formData.stock}
                   onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                  className="px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
                   required
                 />
-                <input
+                <Input
                   type="number"
                   placeholder="Discount %"
                   value={formData.discount_percentage}
                   onChange={(e) => setFormData({ ...formData, discount_percentage: e.target.value })}
-                  className="px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
                   min="0"
                   max="100"
                 />
@@ -463,225 +486,281 @@ export default function ProductsPage() {
             </div>
 
             {/* Product Variants */}
-            <div className="border-b pb-4">
-              <h3 className="font-semibold mb-3 text-gray-700">Variants (comma-separated)</h3>
+            <div className="border-b border-border pb-6">
+              <h3 className="font-semibold mb-4 text-foreground">Variants (comma-separated)</h3>
               <div className="grid grid-cols-2 gap-4">
-                <input
+                <Input
                   type="text"
                   placeholder="Colors (e.g., Black, White, Gray)"
                   value={formData.colors}
                   onChange={(e) => setFormData({ ...formData, colors: e.target.value })}
-                  className="px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
                 />
-                <input
+                <Input
                   type="text"
                   placeholder="Sizes (e.g., S, M, L, XL)"
                   value={formData.sizes}
                   onChange={(e) => setFormData({ ...formData, sizes: e.target.value })}
-                  className="px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
                 />
-                <input
+                <Input
                   type="text"
                   placeholder="Tags (e.g., new, sale, trending)"
                   value={formData.tags}
                   onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                  className="col-span-2 px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
+                  className="col-span-2"
                 />
               </div>
             </div>
 
             {/* Physical Properties */}
-            <div className="border-b pb-4">
-              <h3 className="font-semibold mb-3 text-gray-700">Physical Properties</h3>
+            <div className="border-b border-border pb-6">
+              <h3 className="font-semibold mb-4 text-foreground">Physical Properties</h3>
               <div className="grid grid-cols-2 gap-4">
-                <input
+                <Input
                   type="number"
                   step="0.01"
                   placeholder="Weight (kg)"
                   value={formData.weight_kg}
                   onChange={(e) => setFormData({ ...formData, weight_kg: e.target.value })}
-                  className="px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
                 />
-                <input
+                <Input
                   type="text"
                   placeholder="Dimensions (L x W x H cm)"
                   value={formData.dimensions_cm}
                   onChange={(e) => setFormData({ ...formData, dimensions_cm: e.target.value })}
-                  className="px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
                 />
               </div>
             </div>
 
             {/* Image with AI */}
-            <div className="border-b pb-4">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="font-semibold text-gray-700">Product Image</h3>
-                <button
+            <div className="border-b border-border pb-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-semibold text-foreground">Product Image</h3>
+                <Button
                   type="button"
                   onClick={() => generateAIContent('image')}
                   disabled={generatingAI}
-                  className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-50"
+                  size="sm"
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
                 >
-                  {generatingAI ? '⏳ Generating...' : '🎨 Generate Image'}
-                </button>
+                  <ImageIcon className="h-4 w-4 mr-2" />
+                  {generatingAI ? 'Generating...' : 'Generate Image'}
+                </Button>
               </div>
 
               {showPromptInputs && (
-                <div className="mb-3 p-3 bg-gray-50 rounded border">
-                  <label className="block text-sm font-medium mb-2">Custom Image Prompt (optional)</label>
+                <div className="mb-4 p-4 bg-secondary/50 rounded-xl border border-border">
+                  <label className="block text-sm font-medium mb-2 text-foreground">Custom Image Prompt (optional)</label>
                   <textarea
                     placeholder="Leave empty for default: African models wearing apparel in tech settings, or brand-specific sticker photos. Customize: 'Person in coffee shop wearing...'"
                     value={imagePrompt}
                     onChange={(e) => setImagePrompt(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                     rows={2}
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-muted-foreground mt-2">
                     💡 Default: African men/women models for apparel, brand-themed sticker arrangements
                   </p>
                 </div>
               )}
-              
-              <input
+
+              <Input
                 type="text"
                 placeholder="Image URL"
                 value={formData.image_url}
                 onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
               />
               {formData.image_url && (
-                <img src={formData.image_url} alt="Preview" className="mt-3 h-32 w-32 object-cover rounded border" />
+                <img src={formData.image_url} alt="Preview" className="mt-3 h-32 w-32 object-cover rounded-lg border border-border" />
               )}
             </div>
 
             {/* Settings */}
             <div>
-              <h3 className="font-semibold mb-3 text-gray-700">Settings</h3>
+              <h3 className="font-semibold mb-4 text-foreground">Settings</h3>
               <div className="flex gap-6">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={formData.is_featured}
                     onChange={(e) => setFormData({ ...formData, is_featured: e.target.checked })}
-                    className="w-4 h-4"
+                    className="w-4 h-4 rounded border-border"
                   />
-                  <span className="text-sm">Featured Product</span>
+                  <span className="text-sm text-foreground">Featured Product</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={formData.is_active}
                     onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                    className="w-4 h-4"
+                    className="w-4 h-4 rounded border-border"
                   />
-                  <span className="text-sm">Active (visible to customers)</span>
+                  <span className="text-sm text-foreground">Active (visible to customers)</span>
                 </label>
               </div>
             </div>
 
             {/* Actions */}
             <div className="flex gap-2 pt-4">
-              <button type="submit" className="px-6 py-2 bg-black text-white rounded hover:bg-gray-800">
+              <Button type="submit" className="bg-foreground text-background hover:bg-foreground/90">
                 {editingProduct ? 'Update Product' : 'Add Product'}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 onClick={resetForm}
-                className="px-6 py-2 bg-gray-300 text-black rounded hover:bg-gray-400"
+                variant="outline"
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           </form>
         </div>
       )}
 
       {/* Search */}
-      <div className="mb-6 relative">
-        <Search className="absolute left-3 top-3 text-gray-400" size={20} />
-        <input
+      <div className="relative">
+        <Search className="absolute left-3 top-3 text-muted-foreground" size={20} />
+        <Input
           type="text"
           placeholder="Search products..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+          className="pl-10"
         />
       </div>
 
-      {/* Products Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-100 border-b">
-            <tr>
-              <th className="px-6 py-3 text-left text-sm font-semibold">Product</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold">Brand</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold">Category</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold">Price</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold">Stock</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredProducts.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
-                  No products found
-                </td>
-              </tr>
-            ) : (
-              filteredProducts.map((product) => (
-                <tr key={product.id} className="border-b hover:bg-gray-50">
-                  <td className="px-6 py-4 font-medium">{product.name}</td>
-                  <td className="px-6 py-4">{product.brand}</td>
-                  <td className="px-6 py-4">{product.category}</td>
-                  <td className="px-6 py-4">KSh {product.price.toLocaleString()}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded text-sm ${product.stock < 5 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
-                      {product.stock}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 flex gap-2">
-                    <button 
+      {/* Grid View */}
+      {viewMode === 'grid' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredProducts.length === 0 ? (
+            <div className="col-span-full bg-background rounded-2xl border border-border p-12 text-center">
+              <p className="text-muted-foreground">No products found</p>
+            </div>
+          ) : (
+            filteredProducts.map((product) => (
+              <div key={product.id} className="bg-background rounded-2xl border border-border overflow-hidden hover:shadow-lg transition-shadow group">
+                <div className="aspect-square relative bg-secondary/20">
+                  {product.image_url ? (
+                    <img
+                      src={product.image_url}
+                      alt={product.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <ImageIcon className="h-16 w-16 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
                       onClick={() => handleEdit(product)}
-                      className="p-2 hover:bg-gray-200 rounded"
+                      size="icon"
+                      className="h-8 w-8 bg-blue-600 hover:bg-blue-700 text-white"
                     >
-                      <Edit2 size={18} />
-                    </button>
-                    <button
+                      <Edit2 size={14} />
+                    </Button>
+                    <Button
                       onClick={() => handleDeleteProduct(product.id)}
-                      className="p-2 hover:bg-red-200 rounded text-red-600"
+                      size="icon"
+                      className="h-8 w-8 bg-red-600 hover:bg-red-700 text-white"
                     >
-                      <Trash2 size={18} />
-                    </button>
+                      <Trash2 size={14} />
+                    </Button>
+                  </div>
+                </div>
+                <div className="p-4">
+                  <h3 className="font-semibold text-foreground truncate">{product.name}</h3>
+                  <p className="text-sm text-muted-foreground mt-1">{product.brand}</p>
+                  <div className="flex items-center justify-between mt-3">
+                    <span className="text-lg font-bold text-foreground">KSh {product.price.toLocaleString()}</span>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${product.stock < 5 ? 'bg-red-500/10 text-red-600' : 'bg-green-500/10 text-green-600'}`}>
+                      {product.stock} in stock
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      ) : (
+        /* Table View */
+        <div className="bg-background rounded-2xl border border-border overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-secondary/50 border-b border-border">
+              <tr>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Product</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Brand</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Category</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Price</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Stock</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredProducts.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
+                    No products found
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              ) : (
+                filteredProducts.map((product) => (
+                  <tr key={product.id} className="border-b border-border hover:bg-secondary/30 transition-colors">
+                    <td className="px-6 py-4 font-medium text-foreground">{product.name}</td>
+                    <td className="px-6 py-4 text-muted-foreground">{product.brand}</td>
+                    <td className="px-6 py-4 text-muted-foreground">{product.category}</td>
+                    <td className="px-6 py-4 text-foreground">KSh {product.price.toLocaleString()}</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${product.stock < 5 ? 'bg-red-500/10 text-red-600' : 'bg-green-500/10 text-green-600'}`}>
+                        {product.stock}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 flex gap-2">
+                      <Button
+                        onClick={() => handleEdit(product)}
+                        variant="ghost"
+                        size="icon"
+                        className="hover:bg-blue-500/10 hover:text-blue-600"
+                      >
+                        <Edit2 size={18} />
+                      </Button>
+                      <Button
+                        onClick={() => handleDeleteProduct(product.id)}
+                        variant="ghost"
+                        size="icon"
+                        className="hover:bg-red-500/10 hover:text-red-600"
+                      >
+                        <Trash2 size={18} />
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Pagination */}
-      <div className="mt-6 flex items-center justify-between">
-        <div className="text-sm text-gray-600">
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-muted-foreground">
           Showing {((page - 1) * pageSize) + 1} - {Math.min(page * pageSize, total)} of {total} products
         </div>
         <div className="flex gap-2">
-          <button
+          <Button
             onClick={() => setPage(p => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300"
+            variant="outline"
           >
             Previous
-          </button>
-          <span className="px-4 py-2">Page {page} of {Math.ceil(total / pageSize)}</span>
-          <button
+          </Button>
+          <span className="px-4 py-2 text-sm text-foreground">Page {page} of {Math.ceil(total / pageSize)}</span>
+          <Button
             onClick={() => setPage(p => p + 1)}
             disabled={page >= Math.ceil(total / pageSize)}
-            className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300"
+            variant="outline"
           >
             Next
-          </button>
+          </Button>
         </div>
       </div>
     </div>

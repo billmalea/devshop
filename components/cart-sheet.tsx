@@ -17,11 +17,11 @@ import { Separator } from "@/components/ui/separator"
 import { useCart } from "@/components/cart-provider"
 
 export function CartSheet() {
-  const { 
-    items, 
-    removeItem, 
-    updateQuantity, 
-    totalPrice, 
+  const {
+    items,
+    removeItem,
+    updateQuantity,
+    totalPrice,
     totalItems,
     isCartOpen,
     setIsCartOpen
@@ -46,11 +46,11 @@ export function CartSheet() {
           )}
         </Button>
       </SheetTrigger>
-      <SheetContent className="flex w-full flex-col pr-0 sm:max-w-lg">
+      <SheetContent className="flex w-full flex-col pr-0 sm:max-w-lg max-h-[90vh]">
         <SheetHeader className="px-1">
           <SheetTitle>My Cart ({totalItems})</SheetTitle>
         </SheetHeader>
-        
+
         {items.length > 0 ? (
           <>
             <ScrollArea className="flex-1 pr-6">
@@ -120,9 +120,9 @@ export function CartSheet() {
                 <span className="text-primary">{formattedTotal}</span>
               </div>
               <SheetFooter>
-                <Button asChild className="w-full" size="lg">
+                <Button asChild className="w-full bg-blue-600 hover:bg-blue-700 text-white" size="lg">
                   <Link href="/checkout" onClick={() => setIsCartOpen(false)}>
-                    Checkout with M-Pesa <ArrowRight className="ml-2 h-4 w-4" />
+                    Checkout <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
               </SheetFooter>

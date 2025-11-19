@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/client'
-import { TrendingUp, Users, Package, ShoppingCart } from 'lucide-react'
+import { TrendingUp, Users, Package, ShoppingCart, ArrowRight } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import Link from 'next/link'
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
@@ -58,23 +60,23 @@ export default function AdminDashboard() {
   }, [])
 
   const statCards = [
-    { label: 'Total Users', value: stats.totalUsers, icon: Users, color: 'bg-blue-100' },
-    { label: 'Total Products', value: stats.totalProducts, icon: Package, color: 'bg-green-100' },
-    { label: 'Total Orders', value: stats.totalOrders, icon: ShoppingCart, color: 'bg-purple-100' },
-    { label: 'Total Revenue', value: `KSh ${stats.totalRevenue.toLocaleString()}`, icon: TrendingUp, color: 'bg-yellow-100' },
-    { label: 'Pending Orders', value: stats.pendingOrders, icon: ShoppingCart, color: 'bg-orange-100' },
-    { label: 'Low Stock Items', value: stats.lowStockProducts, icon: Package, color: 'bg-red-100' },
+    { label: 'Total Users', value: stats.totalUsers, icon: Users, color: 'bg-blue-500/10', iconColor: 'text-blue-600' },
+    { label: 'Total Products', value: stats.totalProducts, icon: Package, color: 'bg-green-500/10', iconColor: 'text-green-600' },
+    { label: 'Total Orders', value: stats.totalOrders, icon: ShoppingCart, color: 'bg-purple-500/10', iconColor: 'text-purple-600' },
+    { label: 'Total Revenue', value: `KSh ${stats.totalRevenue.toLocaleString()}`, icon: TrendingUp, color: 'bg-yellow-500/10', iconColor: 'text-yellow-600' },
+    { label: 'Pending Orders', value: stats.pendingOrders, icon: ShoppingCart, color: 'bg-orange-500/10', iconColor: 'text-orange-600' },
+    { label: 'Low Stock Items', value: stats.lowStockProducts, icon: Package, color: 'bg-red-500/10', iconColor: 'text-red-600' },
   ]
 
   if (loading) {
     return (
       <div>
-        <div className="h-8 w-48 bg-gray-200 rounded mb-8 animate-pulse" />
+        <div className="h-10 w-64 bg-secondary rounded-lg mb-8 animate-pulse" />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1,2,3,4,5,6].map(i => (
-            <div key={i} className="bg-white rounded-lg shadow p-6">
-              <div className="h-4 w-24 bg-gray-200 rounded mb-4 animate-pulse" />
-              <div className="h-8 w-32 bg-gray-200 rounded animate-pulse" />
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <div key={i} className="bg-background rounded-2xl border border-border p-6">
+              <div className="h-4 w-24 bg-secondary rounded mb-4 animate-pulse" />
+              <div className="h-8 w-32 bg-secondary rounded animate-pulse" />
             </div>
           ))}
         </div>
@@ -83,22 +85,25 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold mb-8">Dashboard</h1>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-4xl font-heading font-bold text-foreground">Dashboard</h1>
+        <p className="text-muted-foreground mt-2">Overview of your store's performance</p>
+      </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {statCards.map((card, idx) => {
           const Icon = card.icon
           return (
-            <div key={idx} className="bg-white rounded-lg shadow p-6">
+            <div key={idx} className="bg-background rounded-2xl border border-border p-6 hover:shadow-lg transition-shadow">
               <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-gray-600 text-sm mb-2">{card.label}</p>
-                  <p className="text-3xl font-bold text-black">{card.value}</p>
+                <div className="flex-1">
+                  <p className="text-sm text-muted-foreground mb-2">{card.label}</p>
+                  <p className="text-3xl font-bold text-foreground">{card.value}</p>
                 </div>
-                <div className={`${card.color} p-3 rounded-lg`}>
-                  <Icon size={24} className="text-gray-700" />
+                <div className={`${card.color} p-4 rounded-xl`}>
+                  <Icon size={24} className={card.iconColor} />
                 </div>
               </div>
             </div>
@@ -107,21 +112,33 @@ export default function AdminDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-bold mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <a href="/admin/products?action=new" className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800">
-            Add Product
-          </a>
-          <a href="/admin/promotions?action=new" className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800">
-            Create Promo
-          </a>
-          <a href="/admin/orders" className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800">
-            View Orders
-          </a>
-          <a href="/admin/content" className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800">
-            Edit Content
-          </a>
+      <div className="bg-background rounded-2xl border border-border p-6">
+        <h2 className="text-2xl font-heading font-bold text-foreground mb-6">Quick Actions</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Button asChild variant="outline" className="h-auto py-4 justify-between group">
+            <Link href="/admin/products?action=new">
+              <span>Add Product</span>
+              <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </Button>
+          <Button asChild variant="outline" className="h-auto py-4 justify-between group">
+            <Link href="/admin/promotions?action=new">
+              <span>Create Promo</span>
+              <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </Button>
+          <Button asChild variant="outline" className="h-auto py-4 justify-between group">
+            <Link href="/admin/orders">
+              <span>View Orders</span>
+              <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </Button>
+          <Button asChild variant="outline" className="h-auto py-4 justify-between group">
+            <Link href="/admin/content">
+              <span>Edit Content</span>
+              <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </Button>
         </div>
       </div>
     </div>

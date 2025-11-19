@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/client'
 import { Search, Eye } from 'lucide-react'
 import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 interface Order {
   id: string
@@ -69,7 +71,7 @@ export default function OrdersPage() {
         .eq('id', orderId)
 
       if (error) throw error
-      
+
       setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o))
       alert('Order status updated')
     } catch (error) {
@@ -79,23 +81,23 @@ export default function OrdersPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-800'
-      case 'processing': return 'bg-blue-100 text-blue-800'
-      case 'shipped': return 'bg-purple-100 text-purple-800'
-      case 'delivered': return 'bg-green-100 text-green-800'
-      case 'cancelled': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
+      case 'pending': return 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20'
+      case 'processing': return 'bg-blue-500/10 text-blue-600 border-blue-500/20'
+      case 'shipped': return 'bg-purple-500/10 text-purple-600 border-purple-500/20'
+      case 'delivered': return 'bg-green-500/10 text-green-600 border-green-500/20'
+      case 'cancelled': return 'bg-red-500/10 text-red-600 border-red-500/20'
+      default: return 'bg-secondary text-muted-foreground border-border'
     }
   }
 
   if (loading && orders.length === 0) {
     return (
-      <div>
-        <div className="h-8 w-48 bg-gray-200 rounded mb-6 animate-pulse" />
-        <div className="bg-white rounded-lg shadow p-6">
+      <div className="space-y-6">
+        <div className="h-12 w-64 bg-secondary rounded-lg animate-pulse" />
+        <div className="bg-background rounded-2xl border border-border p-6">
           <div className="space-y-4">
-            {[1,2,3,4,5].map(i => (
-              <div key={i} className="h-12 bg-gray-200 rounded animate-pulse" />
+            {[1, 2, 3, 4, 5].map(i => (
+              <div key={i} className="h-16 bg-secondary rounded-lg animate-pulse" />
             ))}
           </div>
         </div>
@@ -104,27 +106,28 @@ export default function OrdersPage() {
   }
 
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Order Management</h1>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-4xl font-heading font-bold text-foreground">Orders</h1>
+        <p className="text-muted-foreground mt-2">Manage customer orders and track deliveries</p>
       </div>
 
       {/* Filters */}
-      <div className="mb-6 flex gap-4">
+      <div className="flex gap-4">
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-3 text-gray-400" size={20} />
-          <input
+          <Search className="absolute left-3 top-3 text-muted-foreground" size={20} />
+          <Input
             type="text"
             placeholder="Search by order ID or phone..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+            className="pl-10"
           />
         </div>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
+          className="px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-blue-600"
         >
           <option value="all">All Status</option>
           <option value="pending">Pending</option>
@@ -136,37 +139,37 @@ export default function OrdersPage() {
       </div>
 
       {/* Orders Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-background rounded-2xl border border-border overflow-hidden">
         <table className="w-full">
-          <thead className="bg-gray-100 border-b">
+          <thead className="bg-secondary/50 border-b border-border">
             <tr>
-              <th className="px-6 py-3 text-left text-sm font-semibold">Order ID</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold">Phone</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold">Total</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold">Status</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold">Payment</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold">Date</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold">Actions</th>
+              <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Order ID</th>
+              <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Phone</th>
+              <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Total</th>
+              <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Status</th>
+              <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Payment</th>
+              <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Date</th>
+              <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Actions</th>
             </tr>
           </thead>
           <tbody>
             {filteredOrders.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
                   No orders found
                 </td>
               </tr>
             ) : (
               filteredOrders.map((order) => (
-                <tr key={order.id} className="border-b hover:bg-gray-50">
-                  <td className="px-6 py-4 font-mono text-sm">{order.id.slice(0, 8)}</td>
-                  <td className="px-6 py-4">{order.phone_number}</td>
-                  <td className="px-6 py-4">KSh {parseFloat(String(order.total_amount)).toLocaleString()}</td>
+                <tr key={order.id} className="border-b border-border hover:bg-secondary/30 transition-colors">
+                  <td className="px-6 py-4 font-mono text-sm text-foreground">{order.id.slice(0, 8)}</td>
+                  <td className="px-6 py-4 text-muted-foreground">{order.phone_number}</td>
+                  <td className="px-6 py-4 text-foreground font-medium">KSh {parseFloat(String(order.total_amount)).toLocaleString()}</td>
                   <td className="px-6 py-4">
                     <select
                       value={order.status}
                       onChange={(e) => updateOrderStatus(order.id, e.target.value)}
-                      className={`px-2 py-1 rounded text-sm font-medium border-0 cursor-pointer ${getStatusColor(order.status)}`}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border cursor-pointer ${getStatusColor(order.status)}`}
                     >
                       <option value="pending">Pending</option>
                       <option value="processing">Processing</option>
@@ -175,16 +178,16 @@ export default function OrdersPage() {
                       <option value="cancelled">Cancelled</option>
                     </select>
                   </td>
-                  <td className="px-6 py-4 text-sm">{order.payment_method || 'M-Pesa'}</td>
-                  <td className="px-6 py-4 text-sm">
+                  <td className="px-6 py-4 text-sm text-muted-foreground">{order.payment_method || 'M-Pesa'}</td>
+                  <td className="px-6 py-4 text-sm text-muted-foreground">
                     {new Date(order.created_at).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4">
-                    <Link href={`/admin/orders/${order.id}`}>
-                      <button className="p-2 hover:bg-gray-200 rounded">
+                    <Button asChild variant="ghost" size="icon" className="hover:bg-blue-500/10 hover:text-blue-600">
+                      <Link href={`/admin/orders/${order.id}`}>
                         <Eye size={18} />
-                      </button>
-                    </Link>
+                      </Link>
+                    </Button>
                   </td>
                 </tr>
               ))
@@ -194,26 +197,26 @@ export default function OrdersPage() {
       </div>
 
       {/* Pagination */}
-      <div className="mt-6 flex items-center justify-between">
-        <div className="text-sm text-gray-600">
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-muted-foreground">
           Showing {((page - 1) * pageSize) + 1} - {Math.min(page * pageSize, total)} of {total} orders
         </div>
         <div className="flex gap-2">
-          <button
+          <Button
             onClick={() => setPage(p => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300"
+            variant="outline"
           >
             Previous
-          </button>
-          <span className="px-4 py-2">Page {page} of {Math.ceil(total / pageSize)}</span>
-          <button
+          </Button>
+          <span className="px-4 py-2 text-sm text-foreground">Page {page} of {Math.ceil(total / pageSize)}</span>
+          <Button
             onClick={() => setPage(p => p + 1)}
             disabled={page >= Math.ceil(total / pageSize)}
-            className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300"
+            variant="outline"
           >
             Next
-          </button>
+          </Button>
         </div>
       </div>
     </div>

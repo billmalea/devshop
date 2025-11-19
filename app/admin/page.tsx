@@ -20,35 +20,24 @@ export default function AdminDashboard() {
       try {
         const supabase = createClient()
 
-        // Fetch total users
-        const { count: usersCount } = await supabase
-          .from('profiles')
-          .select('*', { count: 'exact', head: true })
+        // Parallel queries for better performance
+        const [
+          { count: usersCount },
+          { count: productsCount },
+          { count: ordersCount },
+          { data: revenueData },
+          { count: pendingCount },
+          { count: lowStockCount },
+        ] = await Promise.all([
+          supabase.from('profiles').select('*', { count: 'exact', head: true }),
+          supabase.from('products').select('*', { count: 'exact', head: true }),
+          supabase.from('orders').select('*', { count: 'exact', head: true }),
+          supabase.from('orders').select('total_amount'),
+          supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+          supabase.from('products').select('*', { count: 'exact', head: true }).lt('stock', 5),
+        ])
 
-        // Fetch total products
-        const { count: productsCount } = await supabase
-          .from('products')
-          .select('*', { count: 'exact', head: true })
-
-        // Fetch total orders
-        const { count: ordersCount, data: ordersData } = await supabase
-          .from('orders')
-          .select('*')
-
-        // Calculate total revenue
-        const totalRevenue = ordersData?.reduce((sum: number, order: { total_amount: number }) => sum + parseFloat(String(order.total_amount || 0)), 0) || 0
-
-        // Fetch pending orders
-        const { count: pendingCount } = await supabase
-          .from('orders')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'pending')
-
-        // Fetch low stock products
-        const { count: lowStockCount } = await supabase
-          .from('products')
-          .select('*', { count: 'exact', head: true })
-          .lt('stock', 5)
+        const totalRevenue = revenueData?.reduce((sum: number, order: { total_amount: any }) => sum + Number(order.total_amount || 0), 0) || 0
 
         setStats({
           totalUsers: usersCount || 0,
@@ -78,7 +67,19 @@ export default function AdminDashboard() {
   ]
 
   if (loading) {
-    return <div className="text-center py-12">Loading dashboard...</div>
+    return (
+      <div>
+        <div className="h-8 w-48 bg-gray-200 rounded mb-8 animate-pulse" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1,2,3,4,5,6].map(i => (
+            <div key={i} className="bg-white rounded-lg shadow p-6">
+              <div className="h-4 w-24 bg-gray-200 rounded mb-4 animate-pulse" />
+              <div className="h-8 w-32 bg-gray-200 rounded animate-pulse" />
+            </div>
+          ))}
+        </div>
+      </div>
+    )
   }
 
   return (

@@ -22,6 +22,9 @@ export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
   const [showForm, setShowForm] = useState(false)
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
+  const pageSize = 50
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -34,33 +37,35 @@ export default function ProductsPage() {
 
   useEffect(() => {
     fetchProducts()
-  }, [])
+  }, [page, searchTerm])
 
   const fetchProducts = async () => {
+    setLoading(true)
     try {
       const supabase = createClient()
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
+      const start = (page - 1) * pageSize
+      const end = start + pageSize - 1
+
+      let query = supabase.from('products').select('*', { count: 'exact' })
+
+      if (searchTerm) {
+        query = query.or(`name.ilike.%${searchTerm}%,brand.ilike.%${searchTerm}%`)
+      }
+
+      const { data, error, count } = await query
         .order('created_at', { ascending: false })
+        .range(start, end)
 
       if (error) throw error
       setProducts(data || [])
       setFilteredProducts(data || [])
+      setTotal(count || 0)
     } catch (error) {
       console.error('Failed to fetch products:', error)
     } finally {
       setLoading(false)
     }
   }
-
-  useEffect(() => {
-    const filtered = products.filter(product =>
-      product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.brand?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    setFilteredProducts(filtered)
-  }, [searchTerm, products])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -107,8 +112,19 @@ export default function ProductsPage() {
     }
   }
 
-  if (loading) {
-    return <div className="text-center py-12">Loading products...</div>
+  if (loading && products.length === 0) {
+    return (
+      <div>
+        <div className="h-8 w-48 bg-gray-200 rounded mb-6 animate-pulse" />
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="space-y-4">
+            {[1,2,3,4,5].map(i => (
+              <div key={i} className="h-12 bg-gray-200 rounded animate-pulse" />
+            ))}
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -267,8 +283,28 @@ export default function ProductsPage() {
         </table>
       </div>
 
-      <div className="mt-4 text-sm text-gray-600">
-        Showing {filteredProducts.length} of {products.length} products
+      {/* Pagination */}
+      <div className="mt-6 flex items-center justify-between">
+        <div className="text-sm text-gray-600">
+          Showing {((page - 1) * pageSize) + 1} - {Math.min(page * pageSize, total)} of {total} products
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300"
+          >
+            Previous
+          </button>
+          <span className="px-4 py-2">Page {page} of {Math.ceil(total / pageSize)}</span>
+          <button
+            onClick={() => setPage(p => p + 1)}
+            disabled={page >= Math.ceil(total / pageSize)}
+            className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300"
+          >
+            Next
+          </button>
+        </div>
       </div>
     </div>
   )

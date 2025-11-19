@@ -35,8 +35,7 @@ export default function CheckoutPage() {
   const [phoneNumber, setPhoneNumber] = useState("")
   const [address, setAddress] = useState("")
   const [city, setCity] = useState("")
-  const [postalCode, setPostalCode] = useState("")
-  
+
   const [shippingMethod, setShippingMethod] = useState<"delivery" | "pickup">("delivery")
   const [paymentMethod, setPaymentMethod] = useState<"mpesa" | "cod">("mpesa")
   const [pickupLocation, setPickupLocation] = useState("")
@@ -152,7 +151,7 @@ export default function CheckoutPage() {
 
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (shippingMethod === "pickup" && !pickupLocation) {
       toast.error("Please select a pickup location")
       return
@@ -187,7 +186,7 @@ export default function CheckoutPage() {
       const supabase = createBrowserSupabase()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
-      const shippingAddr = shippingMethod === 'delivery' ? `${address}, ${city}${postalCode ? ' ' + postalCode : ''}` : `Pickup Agent: ${pickupLocation}`
+      const shippingAddr = shippingMethod === 'delivery' ? `${address}, ${city}` : `Pickup Agent: ${pickupLocation}`
       const { data: order, error } = await supabase
         .from('orders')
         .insert({
@@ -214,7 +213,7 @@ export default function CheckoutPage() {
       if (itemsErr) console.error('Order items insert error', itemsErr)
       // Decrement inventory
       for (const i of items) {
-        await supabase.rpc('decrement_stock', { p_product_id: i.id, p_qty: i.quantity }).catch(() => {})
+        await supabase.rpc('decrement_stock', { p_product_id: i.id, p_qty: i.quantity }).catch(() => { })
       }
     } catch (err) {
       console.error('Order creation failed', err)
@@ -271,7 +270,7 @@ export default function CheckoutPage() {
       try {
         const shippingFee = shippingMethod === 'pickup' ? (deliveryCharge || 0) : 250
         const totalWithShipping = totalPrice + shippingFee
-        
+
         const stkRes = await fetch('/api/payments/stk', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -317,18 +316,18 @@ export default function CheckoutPage() {
   if (isSuccess) {
     return (
       <div className="container mx-auto flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
-        <div className="mb-6 rounded-full bg-primary/10 p-6">
-          <CheckCircle2 className="h-16 w-16 text-primary" />
+        <div className="mb-6 rounded-full bg-blue-500/10 p-6">
+          <CheckCircle2 className="h-16 w-16 text-blue-600" />
         </div>
-        <h1 className="text-3xl font-bold tracking-tighter">Order Confirmed!</h1>
+        <h1 className="text-4xl font-heading font-bold text-foreground">Order Confirmed!</h1>
         <p className="mt-4 max-w-md text-muted-foreground">
-          {paymentMethod === "mpesa" 
-            ? "Thank you for your purchase. You will receive an M-Pesa confirmation shortly." 
+          {paymentMethod === "mpesa"
+            ? "Thank you for your purchase. You will receive an M-Pesa confirmation shortly."
             : "Thank you for your order. Please have the exact amount ready upon delivery/pickup."}
           <br />
           We&apos;ll start processing your order right away.
         </p>
-        <Button asChild className="mt-8" size="lg">
+        <Button asChild className="mt-8 bg-blue-600 hover:bg-blue-700" size="lg">
           <Link href="/products">Continue Shopping</Link>
         </Button>
       </div>
@@ -338,9 +337,9 @@ export default function CheckoutPage() {
   if (items.length === 0) {
     return (
       <div className="container mx-auto flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
-        <h1 className="text-2xl font-bold">Your cart is empty</h1>
+        <h1 className="text-3xl font-heading font-bold text-foreground">Your cart is empty</h1>
         <p className="mt-2 text-muted-foreground">Add some items to checkout</p>
-        <Button asChild className="mt-6">
+        <Button asChild className="mt-6 bg-blue-600 hover:bg-blue-700">
           <Link href="/products">Browse Products</Link>
         </Button>
       </div>
@@ -349,13 +348,13 @@ export default function CheckoutPage() {
 
   return (
     <div className="container mx-auto px-4 py-10">
-      <h1 className="mb-8 text-3xl font-bold tracking-tighter">Checkout</h1>
-      
+      <h1 className="mb-8 text-4xl font-heading font-bold text-foreground">Checkout</h1>
+
       <div className="grid gap-8 lg:grid-cols-2">
         <div className="space-y-6">
-          <Card className="border-border/40">
+          <Card className="rounded-2xl border-border">
             <CardHeader>
-              <CardTitle>Contact Information</CardTitle>
+              <CardTitle className="text-foreground">Contact Information</CardTitle>
               <CardDescription>Enter your details for delivery</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -394,25 +393,25 @@ export default function CheckoutPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone Number</Label>
-                <Input 
-                  id="phone" 
-                  placeholder="07XX XXX XXX" 
+                <Input
+                  id="phone"
+                  placeholder="07XX XXX XXX"
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
-                  required 
+                  required
                 />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-border/40">
+          <Card className="rounded-2xl border-border">
             <CardHeader>
-              <CardTitle>Shipping Method</CardTitle>
+              <CardTitle className="text-foreground">Shipping Method</CardTitle>
               <CardDescription>Choose how you want to receive your order</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <RadioGroup 
-                value={shippingMethod} 
+              <RadioGroup
+                value={shippingMethod}
                 onValueChange={(value: "delivery" | "pickup") => setShippingMethod(value)}
                 className="grid grid-cols-2 gap-4"
               >
@@ -450,26 +449,15 @@ export default function CheckoutPage() {
                       required
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="city">City</Label>
-                      <Input
-                        id="city"
-                        placeholder="Nairobi"
-                        value={city}
-                        onChange={(e) => setCity(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="postalCode">Postal Code</Label>
-                      <Input
-                        id="postalCode"
-                        placeholder="00100"
-                        value={postalCode}
-                        onChange={(e) => setPostalCode(e.target.value)}
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="city">City</Label>
+                    <Input
+                      id="city"
+                      placeholder="Nairobi"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      required
+                    />
                   </div>
                 </div>
               ) : (
@@ -495,15 +483,15 @@ export default function CheckoutPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-border/40">
+          <Card className="rounded-2xl border-border">
             <CardHeader>
-              <CardTitle>Payment Method</CardTitle>
+              <CardTitle className="text-foreground">Payment Method</CardTitle>
               <CardDescription>Select your preferred payment option</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handlePayment} className="space-y-6">
-                <RadioGroup 
-                  value={paymentMethod} 
+                <RadioGroup
+                  value={paymentMethod}
                   onValueChange={(value: "mpesa" | "cod") => setPaymentMethod(value)}
                   className="grid grid-cols-2 gap-4"
                 >
@@ -549,7 +537,7 @@ export default function CheckoutPage() {
                 {paymentMethod === "cod" && (
                   <div className="rounded-lg border border-muted bg-muted/50 p-4 animate-in fade-in slide-in-from-top-2">
                     <p className="text-sm text-muted-foreground">
-                      You will pay for your order when it is delivered or when you pick it up. 
+                      You will pay for your order when it is delivered or when you pick it up.
                       Please ensure you have the exact amount or M-Pesa ready.
                     </p>
                   </div>
@@ -560,9 +548,9 @@ export default function CheckoutPage() {
         </div>
 
         <div>
-          <Card className="sticky top-24 border-border/40 bg-secondary/10">
+          <Card className="sticky top-24 rounded-2xl border-border bg-secondary/10">
             <CardHeader>
-              <CardTitle>Order Summary</CardTitle>
+              <CardTitle className="text-foreground">Order Summary</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-3">
@@ -595,7 +583,7 @@ export default function CheckoutPage() {
                 </span>
               </div>
               <Separator />
-              <div className="flex justify-between text-lg font-bold text-primary">
+              <div className="flex justify-between text-lg font-bold text-blue-600">
                 <span>Total</span>
                 <span>
                   {new Intl.NumberFormat('en-KE', {
@@ -607,9 +595,9 @@ export default function CheckoutPage() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button 
-                className="w-full" 
-                size="lg" 
+              <Button
+                className="w-full bg-blue-600 hover:bg-blue-700"
+                size="lg"
                 onClick={handlePayment}
                 disabled={isLoading}
               >

@@ -4,81 +4,104 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Pure black and white palette - removed lime and faded colors */
-  --background: #FFFFFF;
+  /* Monochrome Light Mode */
+  --background: #ffffff;
   --foreground: #000000;
-  --card: #F5F5F5;
+
+  --card: #ffffff;
   --card-foreground: #000000;
-  --popover: #FFFFFF;
+
+  --popover: #ffffff;
   --popover-foreground: #000000;
-  --primary: #16a34a;
-  --primary-foreground: #FFFFFF;
-  --secondary: #F3F4F6;
-  --secondary-foreground: #1F2937;
-  --muted: #9CA3AF;
-  --muted-foreground: #6B7280;
-  --accent: #F3F4F6;
-  --accent-foreground: #111827;
-  --destructive: #EF4444;
-  --destructive-foreground: #FFFFFF;
-  --border: #E5E7EB;
-  --input: #E5E7EB;
-  --ring: #16a34a;
-  --chart-1: #000000;
-  --chart-2: #404040;
-  --chart-3: #808080;
-  --chart-4: #C0C0C0;
-  --chart-5: #E0E0E0;
+
+  --primary: #000000;
+  --primary-foreground: #ffffff;
+
+  --secondary: #f4f4f5;
+  --secondary-foreground: #18181b;
+
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+
+  --accent: #f4f4f5;
+  --accent-foreground: #18181b;
+
+  --destructive: #ef4444;
+  --destructive-foreground: #fafafa;
+
+  --border: #e4e4e7;
+  --input: #e4e4e7;
+  --ring: #000000;
+
   --radius: 0.5rem;
-  --sidebar: #FFFFFF;
+
+  --chart-1: #000000;
+  --chart-2: #333333;
+  --chart-3: #666666;
+  --chart-4: #999999;
+  --chart-5: #cccccc;
+
+  --sidebar: #ffffff;
   --sidebar-foreground: #000000;
   --sidebar-primary: #000000;
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #F0F0F0;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f4f4f5;
   --sidebar-accent-foreground: #000000;
-  --sidebar-border: #E0E0E0;
+  --sidebar-border: #e4e4e7;
   --sidebar-ring: #000000;
 }
 
 .dark {
-  /* Dark mode: black background, white text */
+  /* Monochrome Dark Mode */
   --background: #000000;
-  --foreground: #FFFFFF;
-  --card: #1A1A1A;
-  --card-foreground: #FFFFFF;
-  --popover: #1A1A1A;
-  --popover-foreground: #FFFFFF;
-  --primary: #FFFFFF;
+  --foreground: #ffffff;
+
+  --card: #000000;
+  --card-foreground: #ffffff;
+
+  --popover: #000000;
+  --popover-foreground: #ffffff;
+
+  --primary: #ffffff;
   --primary-foreground: #000000;
-  --secondary: #2A2A2A;
-  --secondary-foreground: #FFFFFF;
-  --muted: #808080;
-  --muted-foreground: #A0A0A0;
-  --accent: #FFFFFF;
-  --accent-foreground: #000000;
-  --destructive: #FF4444;
-  --destructive-foreground: #FFFFFF;
-  --border: #333333;
-  --input: #1A1A1A;
-  --ring: #FFFFFF;
-  --chart-1: #FFFFFF;
-  --chart-2: #D0D0D0;
-  --chart-3: #A0A0A0;
-  --chart-4: #606060;
-  --chart-5: #303030;
+
+  --secondary: #27272a;
+  --secondary-foreground: #fafafa;
+
+  --muted: #27272a;
+  --muted-foreground: #a1a1aa;
+
+  --accent: #27272a;
+  --accent-foreground: #fafafa;
+
+  --destructive: #7f1d1d;
+  --destructive-foreground: #fafafa;
+
+  --border: #27272a;
+  --input: #27272a;
+  --ring: #ffffff;
+
+  --chart-1: #ffffff;
+  --chart-2: #cccccc;
+  --chart-3: #999999;
+  --chart-4: #666666;
+  --chart-5: #333333;
+
   --sidebar: #000000;
-  --sidebar-foreground: #FFFFFF;
-  --sidebar-primary: #FFFFFF;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #ffffff;
   --sidebar-primary-foreground: #000000;
-  --sidebar-accent: #2A2A2A;
-  --sidebar-accent-foreground: #FFFFFF;
-  --sidebar-border: #333333;
-  --sidebar-ring: #FFFFFF;
+  --sidebar-accent: #27272a;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #27272a;
+  --sidebar-ring: #ffffff;
 }
 
 @theme inline {
   --font-sans: 'Geist', 'Geist Fallback';
   --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --font-heading: 'Outfit', 'Geist', sans-serif;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -121,7 +144,26 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-heading tracking-tight;
+  }
+}
+
+@layer utilities {
+  .bg-grid-pattern {
+    background-image: linear-gradient(to right, #888 1px, transparent 1px),
+      linear-gradient(to bottom, #888 1px, transparent 1px);
+    background-size: 40px 40px;
+    mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
   }
 }

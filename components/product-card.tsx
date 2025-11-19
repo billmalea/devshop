@@ -43,41 +43,46 @@ export function ProductCard({ product }: ProductCardProps) {
   }
 
   return (
-    <Card className="group overflow-hidden border-border bg-card text-card-foreground transition-all hover:shadow-lg hover:border-primary/50 duration-300">
+    <Card className="group overflow-hidden border-border bg-card text-card-foreground rounded-xl hover:border-foreground/20 transition-all duration-300 hover:shadow-lg">
       <Link href={`/products/${product.id}`}>
-        <div className="relative aspect-4/3 overflow-hidden bg-secondary">
+        <div className="relative aspect-4/3 overflow-hidden bg-secondary/50 group-hover:bg-secondary/30 transition-colors">
           <Image
             src={product.image_url || '/placeholder.svg?height=400&width=400&query=developer%20merchandise'}
             alt={product.name}
             fill
-            className="object-cover transition-transform group-hover:scale-110 duration-300"
+            className="object-cover transition-transform group-hover:scale-105 duration-500 grayscale group-hover:grayscale-0"
           />
-          <Badge className="absolute right-3 top-3 bg-primary text-primary-foreground font-semibold shadow-md">
+          <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+          <Badge className="absolute right-3 top-3 bg-background/80 backdrop-blur-sm text-foreground border-border font-medium text-xs rounded-full shadow-sm">
             {product.brand}
           </Badge>
         </div>
       </Link>
-      
-      <CardContent className="p-4 space-y-2">
+
+      <CardContent className="p-5 space-y-3">
         <Link href={`/products/${product.id}`}>
-          <h3 className="font-semibold text-foreground leading-snug group-hover:text-primary transition-colors">
+          <h3 className="font-bold text-lg text-foreground leading-snug group-hover:underline decoration-2 underline-offset-4 transition-all line-clamp-1">
             {product.name}
           </h3>
         </Link>
-        <p className="text-xs text-muted-foreground line-clamp-2">
-          {product.description}
+        <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+          {product.description || "No description available"}
         </p>
-        <div className="flex items-center justify-between pt-2">
-          <span className="text-lg font-bold text-primary">{formattedPrice}</span>
-          <span className="text-xs text-muted-foreground font-medium">
-            {product.stock > 0 ? `${product.stock} left` : 'Out of stock'}
+        <div className="flex items-center gap-2">
+          <div className={`w-1.5 h-1.5 rounded-full ${product.stock > 0 ? 'bg-foreground' : 'bg-muted-foreground'}`} />
+          <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+            {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
           </span>
         </div>
       </CardContent>
-      
-      <CardFooter className="p-4 pt-0">
-        <Button 
-          className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-medium" 
+
+      <CardFooter className="p-5 pt-0 flex items-center justify-between gap-3">
+        <div className="font-heading font-bold text-lg text-foreground">
+          {formattedPrice}
+        </div>
+        <Button
+          className="bg-foreground text-background hover:bg-foreground/90 font-medium text-sm rounded-full px-6"
           disabled={product.stock === 0}
           onClick={handleAddToCart}
         >

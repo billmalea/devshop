@@ -1,13 +1,13 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, Package, Truck, Shield } from 'lucide-react'
+import { ArrowRight, Package, Truck, Shield, CreditCard, Shirt, Sticker, Code, Cpu, Zap, Keyboard } from 'lucide-react'
 import { createClient } from "@/lib/server"
 import { ProductCard } from "@/components/product-card"
 import Image from 'next/image'
 
 export default async function HomePage() {
   const supabase = await createClient()
-  
+
   const { data: featuredProducts, error } = await supabase
     .from('products')
     .select('*')
@@ -18,174 +18,199 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="flex flex-col">
-      <section className="relative overflow-hidden border-b border-border bg-linear-to-b from-white to-secondary/20">
-        <div className="container mx-auto px-4 py-16 md:py-24">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-            {/* Left side: Text content */}
-            <div>
-              <div className="inline-flex items-center rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-sm font-medium text-primary mb-6">
-                <span className="flex h-2 w-2 rounded-full bg-primary mr-2"></span>
-                Now Shipping to Nairobi & Environs
+    <div className="flex flex-col min-h-screen">
+      {/* Hero Section */}
+      <section className="relative overflow-hidden bg-background pt-16 pb-24 md:pt-32 md:pb-48 border-b border-border">
+        {/* Ambient Background Glow */}
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-500/10 blur-[120px] animate-pulse" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-violet-500/10 blur-[120px] animate-pulse delay-1000" />
+        </div>
+
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="space-y-8">
+              <div className="inline-flex items-center rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-sm font-medium text-blue-500 backdrop-blur-sm">
+                <span className="flex h-2 w-2 rounded-full bg-blue-500 mr-2 animate-pulse"></span>
+                New Collection Available
               </div>
-              <h1 className="text-5xl font-bold tracking-tighter sm:text-6xl text-balance text-foreground mb-6">
-                Premium Developer Merch in Kenya
+
+              <h1 className="text-5xl md:text-7xl font-bold tracking-tighter text-foreground leading-[1.1]">
+                Elevate Your <br />
+                <span className="text-blue-600 dark:text-blue-400">Tech Stack</span>
               </h1>
-              
-              <p className="text-lg text-foreground/70 text-balance leading-relaxed mb-8">
-                Wear your code. Celebrate your tech stack. 
-                Exclusive hoodies, stickers, and gear from Amazon, AWS, Vercel, Google, and more.
-                Delivered to your doorstep.
+
+              <p className="text-xl text-muted-foreground max-w-lg leading-relaxed">
+                Premium merchandise for developers who ship.
+                High-quality gear from the brands you use every day.
               </p>
-              
+
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button asChild size="lg" className="text-base font-semibold shadow-lg shadow-primary/20">
+                <Button asChild size="lg" className="bg-foreground text-background hover:bg-foreground/90 font-bold text-base rounded-full px-8 transition-all duration-300">
                   <Link href="/products">
                     Shop Now <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
-                <Button asChild variant="outline" size="lg" className="text-base">
+                <Button asChild variant="outline" size="lg" className="rounded-full px-8 border-border hover:bg-secondary">
                   <Link href="/products?category=hoodies">
-                    Browse Hoodies
+                    View Hoodies
                   </Link>
                 </Button>
               </div>
 
-              <div className="mt-12 grid grid-cols-2 gap-6">
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-white border border-border shadow-sm">
-                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <Truck className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-bold text-sm text-foreground">Fast Delivery</span>
-                    <span className="text-xs text-muted-foreground">Countrywide Shipping</span>
-                  </div>
+              <div className="flex items-center gap-4 pt-4 text-sm font-medium text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <Truck className="h-4 w-4" />
+                  <span>Pay on Delivery</span>
                 </div>
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-white border border-border shadow-sm">
-                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <Shield className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-bold text-sm text-foreground">Secure Payment</span>
-                    <span className="text-xs text-muted-foreground">M-Pesa & Cards</span>
-                  </div>
+                <div className="h-4 w-px bg-border" />
+                <div className="flex items-center gap-2">
+                  <Shield className="h-4 w-4" />
+                  <span>Secure Payments</span>
                 </div>
               </div>
             </div>
 
-            {/* Right side: Featured product cards */}
-            <div className="grid grid-cols-2 gap-4 auto-rows-max">
-              {featuredProducts && featuredProducts.slice(0, 4).map((product) => (
-                <Link 
-                  key={product.id}
-                  href={`/products/${product.id}`}
-                  className="group overflow-hidden rounded-xl border border-border bg-white hover:border-primary/50 transition-all hover:shadow-xl hover:shadow-primary/5"
-                >
-                  <div className="relative aspect-4/3 bg-secondary overflow-hidden">
-                    <Image
-                      src={product.image_url || `/placeholder.svg?height=300&width=300&query=${encodeURIComponent(product.brand + ' ' + product.category)}`}
-                      alt={product.name}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
+            {/* Merged Visuals: Rings + Icons + Cards */}
+            <div className="relative h-[500px] lg:h-[700px] w-full flex items-center justify-center mt-12 lg:mt-0">
+              {/* Spinning Rings */}
+              <div className="absolute inset-0 flex items-center justify-center scale-75 lg:scale-100">
+                <div className="w-[500px] h-[500px] border border-foreground/5 rounded-full animate-[spin_30s_linear_infinite]" />
+                <div className="absolute w-[350px] h-[350px] border border-blue-500/10 rounded-full animate-[spin_20s_linear_infinite_reverse]" />
+                <div className="absolute w-[650px] h-[650px] border border-violet-500/5 rounded-full animate-[spin_40s_linear_infinite]" />
+              </div>
+
+              {/* Floating Icons */}
+              <div className="absolute top-10 right-10 lg:top-12 lg:right-12 p-3 lg:p-5 bg-background/80 backdrop-blur-md border border-border rounded-2xl shadow-xl animate-[bounce_4s_infinite]">
+                <Code className="h-5 w-5 lg:h-8 lg:w-8 text-foreground" />
+              </div>
+              <div className="absolute top-10 left-10 lg:top-12 lg:left-12 p-3 lg:p-5 bg-background/80 backdrop-blur-md border border-border rounded-2xl shadow-xl animate-[bounce_6s_infinite] delay-300">
+                <Zap className="h-5 w-5 lg:h-8 lg:w-8 text-yellow-500" />
+              </div>
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 lg:bottom-0 p-3 lg:p-5 bg-background/80 backdrop-blur-md border border-border rounded-2xl shadow-xl animate-[bounce_5s_infinite] delay-700">
+                <Cpu className="h-5 w-5 lg:h-8 lg:w-8 text-blue-500" />
+              </div>
+
+              {/* Merch Cards Stack (2 on Mobile, 3 on Desktop) */}
+              <div className="relative z-10 flex items-center justify-center -space-x-16 lg:-space-x-24 hover:space-x-4 transition-all duration-700 ease-out">
+                {/* Card 1: Hoodie */}
+                <div className="relative aspect-[3/4] w-48 lg:w-72 rounded-2xl overflow-hidden bg-secondary border border-border shadow-2xl -rotate-12 hover:rotate-0 hover:scale-105 hover:z-20 transition-all duration-500 origin-bottom-right">
+                  <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                    <Shirt className="h-16 w-16 lg:h-32 lg:w-32 text-muted-foreground/20" />
                   </div>
-                  <div className="p-3">
-                    <p className="text-xs font-semibold text-primary mb-1">{product.brand}</p>
-                    <p className="text-sm font-bold text-foreground line-clamp-1">{product.name}</p>
-                    <p className="text-sm font-bold text-foreground mt-1">KES {product.price.toLocaleString()}</p>
+                  <div className="absolute bottom-0 left-0 right-0 p-3 lg:p-6 bg-background/90 backdrop-blur-sm border-t border-border">
+                    <p className="font-bold text-sm lg:text-xl">Dev Hoodies</p>
+                    <p className="text-[10px] lg:text-sm text-muted-foreground">Premium Cotton</p>
                   </div>
-                </Link>
-              ))}
+                </div>
+
+                {/* Card 2: Keyboard (Hidden on Mobile) */}
+                <div className="relative hidden lg:block aspect-[3/4] w-48 lg:w-72 rounded-2xl overflow-hidden bg-secondary border border-border shadow-2xl z-10 hover:scale-110 hover:z-30 transition-all duration-500 -translate-y-8 lg:-translate-y-16">
+                  <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                    <Keyboard className="h-16 w-16 lg:h-32 lg:w-32 text-muted-foreground/20" />
+                  </div>
+                  <div className="absolute bottom-0 left-0 right-0 p-3 lg:p-6 bg-background/90 backdrop-blur-sm border-t border-border">
+                    <p className="font-bold text-sm lg:text-xl">Mech Keys</p>
+                    <p className="text-[10px] lg:text-sm text-muted-foreground">Tactile Switches</p>
+                  </div>
+                </div>
+
+                {/* Card 3: Sticker */}
+                <div className="relative aspect-[3/4] w-48 lg:w-72 rounded-2xl overflow-hidden bg-secondary border border-border shadow-2xl rotate-12 hover:rotate-0 hover:scale-105 hover:z-20 transition-all duration-500 origin-bottom-left">
+                  <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                    <Sticker className="h-16 w-16 lg:h-32 lg:w-32 text-muted-foreground/20" />
+                  </div>
+                  <div className="absolute bottom-0 left-0 right-0 p-3 lg:p-6 bg-background/90 backdrop-blur-sm border-t border-border">
+                    <p className="font-bold text-sm lg:text-xl">Laptop Stickers</p>
+                    <p className="text-[10px] lg:text-sm text-muted-foreground">Die-cut Vinyl</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="border-b border-border py-20 bg-white">
+      {/* Features Section */}
+      <section className="border-b border-border bg-background">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-            <div className="flex flex-col items-start space-y-3 p-6 rounded-2xl bg-secondary/30 border border-border/50">
-              <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mb-2">
-                <Package className="h-6 w-6 text-primary" />
+          <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-border">
+            <div className="p-8 flex flex-col items-center text-center gap-4 hover:bg-secondary/40 transition-colors">
+              <div className="p-4 bg-secondary rounded-full text-foreground">
+                <Package className="h-6 w-6" />
               </div>
-              <h3 className="text-lg font-bold text-foreground">Premium Quality</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                High-quality materials and vibrant prints that last. Sourced directly from official merchandise stores.
-              </p>
+              <div>
+                <h3 className="font-bold text-foreground text-lg">Premium Quality</h3>
+                <p className="text-sm text-muted-foreground mt-1">Official merchandise from top tech brands</p>
+              </div>
             </div>
-            <div className="flex flex-col items-start space-y-3 p-6 rounded-2xl bg-secondary/30 border border-border/50">
-              <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mb-2">
-                <Truck className="h-6 w-6 text-primary" />
+            <div className="p-8 flex flex-col items-center text-center gap-4 hover:bg-secondary/40 transition-colors">
+              <div className="p-4 bg-secondary rounded-full text-foreground">
+                <Truck className="h-6 w-6" />
               </div>
-              <h3 className="text-lg font-bold text-foreground">Fast Delivery</h3>
-              <p className="text-sm text-foreground/60 leading-relaxed">
-                Quick delivery across Kenya via M-Pesa or Pickup Mtaani
-              </p>
+              <div>
+                <h3 className="font-bold text-foreground text-lg">Fast Delivery</h3>
+                <p className="text-sm text-muted-foreground mt-1">Countrywide shipping to your doorstep</p>
+              </div>
             </div>
-            <div className="flex flex-col items-start space-y-3 p-6 rounded-2xl bg-secondary/30 border border-border/50">
-              <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mb-2">
-                <Shield className="h-6 w-6 text-primary" />
+            <div className="p-8 flex flex-col items-center text-center gap-4 hover:bg-secondary/40 transition-colors">
+              <div className="p-4 bg-secondary rounded-full text-foreground">
+                <CreditCard className="h-6 w-6" />
               </div>
-              <h3 className="text-lg font-bold text-foreground">Secure Payments</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Safe and easy mobile & card payments via M-Pesa.
-              </p>
+              <div>
+                <h3 className="font-bold text-foreground text-lg">Secure Payments</h3>
+                <p className="text-sm text-muted-foreground mt-1">Safe transactions via M-Pesa & Cards</p>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="py-20 bg-white">
+      {/* Featured Products */}
+      <section className="py-24 bg-background">
         <div className="container mx-auto px-4">
-          <div className="mb-12 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-12">
             <div>
-              <h2 className="text-4xl font-bold tracking-tighter text-foreground">Featured Products</h2>
-              <p className="mt-3 text-foreground/60 text-lg">
+              <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">Featured Products</h2>
+              <p className="mt-2 text-muted-foreground text-lg">
                 Explore our most popular developer merchandise
               </p>
             </div>
-            <Button asChild variant="outline" className="hidden md:flex border-black/20 hover:bg-black/5">
+            <Button asChild variant="ghost" className="text-foreground hover:bg-secondary">
               <Link href="/products">
-                View All <ArrowRight className="ml-2 h-4 w-4" />
+                View All Products <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
           </div>
-          
+
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {featuredProducts && featuredProducts.length > 0 ? (
               featuredProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))
             ) : (
-              <div className="col-span-full text-center py-12">
-                <p className="text-foreground/60">No products available yet. Please run the database seed scripts.</p>
+              <div className="col-span-full text-center py-12 border border-dashed border-border rounded-xl bg-secondary/20">
+                <p className="text-muted-foreground">No products found. Please check back later.</p>
               </div>
             )}
-          </div>
-
-          <div className="mt-10 text-center md:hidden">
-            <Button asChild variant="outline">
-              <Link href="/products">
-                View All Products <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
           </div>
         </div>
       </section>
 
-      <section className="border-t border-b border-border bg-white py-20">
+      {/* Brands Grid */}
+      <section className="border-t border-border py-24 bg-secondary/10">
         <div className="container mx-auto px-4">
-          <h2 className="mb-12 text-center text-3xl font-bold tracking-tighter text-foreground">
-            Shop by Brand
+          <h2 className="mb-12 text-center text-2xl font-bold tracking-tight text-muted-foreground">
+            Trusted Brands
           </h2>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-7">
+          <div className="flex flex-wrap justify-center gap-8 md:gap-16 opacity-50 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-500">
             {['Amazon', 'AWS', 'Vercel', 'Anthropic', 'Google', 'Microsoft', 'Uber'].map((brand) => (
               <Link
                 key={brand}
                 href={`/products?brand=${brand}`}
-                className="flex items-center justify-center rounded-lg border border-black/10 bg-white p-6 transition-all hover:border-black hover:shadow-md hover:bg-black hover:text-white duration-300 font-semibold"
+                className="text-xl font-bold text-foreground hover:text-foreground transition-colors"
               >
-                <span>{brand}</span>
+                {brand}
               </Link>
             ))}
           </div>

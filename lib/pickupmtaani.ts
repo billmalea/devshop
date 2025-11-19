@@ -51,6 +51,31 @@ interface BusinessDetails {
   category: string
 }
 
+interface MpesaPaymentResponse {
+  success: boolean
+  message: string
+  transaction_id?: string
+}
+
+interface PaymentVerification {
+  success: boolean
+  paid: boolean
+  transaction_id: string
+  amount?: number
+}
+
+interface WebhookRegistration {
+  success: boolean
+  webhook_id: string
+  url: string
+}
+
+interface BusinessCategory {
+  id: string
+  name: string
+  description?: string
+}
+
 class PickupMtaaniAPI {
   private apiKey: string
   private baseURL: string
@@ -89,12 +114,12 @@ class PickupMtaaniAPI {
     return this.request<Location[]>('/locations')
   }
 
-  async getAreas(): Promise<any[]> {
-    return this.request<any[]>('/locations/areas')
+  async getAreas(): Promise<Location[]> {
+    return this.request<Location[]>('/locations/areas')
   }
 
-  async getZones(): Promise<any[]> {
-    return this.request<any[]>('/locations/zones')
+  async getZones(): Promise<Location[]> {
+    return this.request<Location[]>('/locations/zones')
   }
 
   // Delivery Charges
@@ -124,16 +149,16 @@ class PickupMtaaniAPI {
     })
   }
 
-  async getAgentPackage(packageId: string): Promise<any> {
-    return this.request<any>(`/packages/agent-agent?id=${packageId}`)
+  async getAgentPackage(packageId: string): Promise<AgentPackageResponse> {
+    return this.request<AgentPackageResponse>(`/packages/agent-agent?id=${packageId}`)
   }
 
-  async getMyAgentPackages(): Promise<any[]> {
-    return this.request<any[]>('/packages/agent-agent/mine')
+  async getMyAgentPackages(): Promise<AgentPackageResponse[]> {
+    return this.request<AgentPackageResponse[]>('/packages/agent-agent/mine')
   }
 
-  async updateAgentPackage(packageId: string, data: Partial<AgentPackageRequest>): Promise<any> {
-    return this.request<any>('/packages/agent-update', {
+  async updateAgentPackage(packageId: string, data: Partial<AgentPackageRequest>): Promise<AgentPackageResponse> {
+    return this.request<AgentPackageResponse>('/packages/agent-update', {
       method: 'PUT',
       body: JSON.stringify({ id: packageId, ...data }),
     })
@@ -145,13 +170,13 @@ class PickupMtaaniAPI {
     })
   }
 
-  async getUnpaidPackages(): Promise<any[]> {
-    return this.request<any[]>('/packages/my-unpaid-packages')
+  async getUnpaidPackages(): Promise<AgentPackageResponse[]> {
+    return this.request<AgentPackageResponse[]>('/packages/my-unpaid-packages')
   }
 
   // Payments
-  async payWithMpesaSTK(packageId: string, phoneNumber: string): Promise<any> {
-    return this.request<any>('/payment/pay-delivery-stk', {
+  async payWithMpesaSTK(packageId: string, phoneNumber: string): Promise<MpesaPaymentResponse> {
+    return this.request<MpesaPaymentResponse>('/payment/pay-delivery-stk', {
       method: 'PUT',
       body: JSON.stringify({
         package_id: packageId,
@@ -160,8 +185,8 @@ class PickupMtaaniAPI {
     })
   }
 
-  async verifyPayment(transactionId: string): Promise<any> {
-    return this.request<any>('/payment/verify-payment', {
+  async verifyPayment(transactionId: string): Promise<PaymentVerification> {
+    return this.request<PaymentVerification>('/payment/verify-payment', {
       method: 'PUT',
       body: JSON.stringify({
         transaction_id: transactionId,

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/client'
 import { Search, Eye } from 'lucide-react'
+import Link from 'next/link'
 
 interface Order {
   id: string
@@ -168,9 +169,11 @@ export default function OrdersPage() {
                     {new Date(order.created_at).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4">
-                    <button className="p-2 hover:bg-gray-200 rounded">
-                      <Eye size={18} />
-                    </button>
+                    <Link href={`/admin/orders/${order.id}`}>
+                      <button className="p-2 hover:bg-gray-200 rounded">
+                        <Eye size={18} />
+                      </button>
+                    </Link>
                   </td>
                 </tr>
               ))

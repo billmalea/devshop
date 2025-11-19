@@ -26,6 +26,9 @@ export default function CheckoutPage() {
   const [isSuccess, setIsSuccess] = useState(false)
   const [pickupLocations, setPickupLocations] = useState<Location[]>([])
   const [locationsLoading, setLocationsLoading] = useState(false)
+  const ORIGIN_AGENT_ID = process.env.NEXT_PUBLIC_PICKUP_MTAANI_ORIGIN_ID || ''
+  const [deliveryCharge, setDeliveryCharge] = useState<number | null>(null)
+  const [deliveryChargeLoading, setDeliveryChargeLoading] = useState(false)
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
@@ -70,6 +73,40 @@ export default function CheckoutPage() {
     }
     fetchLocations()
   }, [])
+
+  // Calculate delivery charge for pickup method
+  useEffect(() => {
+    const calcCharge = async () => {
+      if (shippingMethod !== 'pickup' || !pickupLocation || !ORIGIN_AGENT_ID) {
+        setDeliveryCharge(null)
+        return
+      }
+      setDeliveryChargeLoading(true)
+      try {
+        const params = new URLSearchParams({ origin: ORIGIN_AGENT_ID, destination: pickupLocation })
+        const res = await fetch(`/api/pickup-mtaani/delivery-charge?${params.toString()}`)
+        if (res.ok) {
+          const data = await res.json()
+          if (typeof data.amount === 'number') {
+            setDeliveryCharge(data.amount)
+          } else if (data.data && typeof data.data.amount === 'number') {
+            setDeliveryCharge(data.data.amount)
+          } else {
+            setDeliveryCharge(null)
+          }
+        } else {
+          setDeliveryCharge(null)
+        }
+      } catch (e) {
+        console.error('Failed to calculate delivery charge', e)
+        setDeliveryCharge(null)
+      } finally {
+        setDeliveryChargeLoading(false)
+      }
+    }
+    calcCharge()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shippingMethod, pickupLocation])
 
   // Prefill from Supabase profile
   useEffect(() => {
@@ -144,14 +181,132 @@ export default function CheckoutPage() {
       console.error("Failed to persist phone number", err)
     }
 
-    if (paymentMethod === "mpesa") {
-      // Simulate M-Pesa STK Push
-      await new Promise(resolve => setTimeout(resolve, 3000))
-      toast.success("Payment successful! Order placed.")
+    // 1. Create order in database (pending)
+    let orderId: string | null = null
+    try {
+      const supabase = createBrowserSupabase()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
+      const shippingAddr = shippingMethod === 'delivery' ? `${address}, ${city}${postalCode ? ' ' + postalCode : ''}` : `Pickup Agent: ${pickupLocation}`
+      const { data: order, error } = await supabase
+        .from('orders')
+        .insert({
+          user_id: user.id,
+          total_amount: totalPrice,
+          status: 'pending',
+          phone_number: phoneNumber,
+          payment_method: paymentMethod,
+          shipping_method: shippingMethod === 'pickup' ? 'pickup_agent' : 'home_delivery',
+          shipping_address: shippingAddr
+        })
+        .select()
+        .single()
+      if (error) throw error
+      orderId = order.id
+      // Insert order_items
+      const itemsPayload = items.map(i => ({
+        order_id: orderId,
+        product_id: i.id,
+        quantity: i.quantity,
+        price: i.price
+      }))
+      const { error: itemsErr } = await supabase.from('order_items').insert(itemsPayload)
+      if (itemsErr) console.error('Order items insert error', itemsErr)
+      // Decrement inventory
+      for (const i of items) {
+        await supabase.rpc('decrement_stock', { p_product_id: i.id, p_qty: i.quantity }).catch(() => {})
+      }
+    } catch (err) {
+      console.error('Order creation failed', err)
+      toast.error('Failed to create order')
+    }
+
+    // 2. Create Pickup Mtaani package (if pickup)
+    let packageId: string | null = null
+    if (orderId && shippingMethod === 'pickup') {
+      if (!ORIGIN_AGENT_ID) {
+        toast.error('Pickup Mtaani origin ID not configured')
+      } else {
+        try {
+          const res = await fetch('/api/pickup-mtaani/packages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              originId: ORIGIN_AGENT_ID,
+              destinationId: pickupLocation,
+              packageDescription: `Order ${orderId} with ${items.length} item(s)`,
+              recipientName: `${firstName} ${lastName}`.trim(),
+              recipientPhone: phoneNumber,
+              paymentMode: paymentMethod === 'cod' ? 'COD' : 'PREPAID',
+              codAmount: paymentMethod === 'cod' ? totalPrice : undefined,
+              value: totalPrice,
+            })
+          })
+          if (res.ok) {
+            const pkg = await res.json()
+            packageId = pkg.id
+            toast.success(`Delivery package created (${pkg.tracking_code || pkg.id})`)
+            // Persist package record
+            const supabase = createBrowserSupabase()
+            await supabase.from('delivery_packages').insert({
+              order_id: orderId,
+              package_id: pkg.id,
+              tracking_code: pkg.tracking_code,
+              status: pkg.status || 'created',
+              delivery_fee: pkg.delivery_fee,
+              payment_mode: paymentMethod === 'cod' ? 'COD' : 'PREPAID'
+            }).catch((e: unknown) => console.error('delivery_packages insert error', e))
+          } else {
+            toast.error('Failed to create delivery package')
+          }
+        } catch (err) {
+          console.error('Package creation error', err)
+          toast.error('Error creating delivery package')
+        }
+      }
+    }
+
+    // 3. Handle payment
+    if (paymentMethod === 'mpesa') {
+      try {
+        const shippingFee = shippingMethod === 'pickup' ? (deliveryCharge || 0) : 250
+        const totalWithShipping = totalPrice + shippingFee
+        
+        const stkRes = await fetch('/api/payments/stk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: totalWithShipping,
+            phoneNumber: phoneNumber,
+            reference: orderId,
+            description: `Order ${orderId}`
+          })
+        })
+
+        if (stkRes.ok) {
+          const stkData = await stkRes.json()
+          toast.success('M-Pesa payment prompt sent to your phone')
+          console.log('STK Push initiated:', stkData)
+        } else {
+          const errData = await stkRes.json()
+          toast.error(errData.error || 'Failed to initiate M-Pesa payment')
+        }
+      } catch (e) {
+        console.error('Mpesa initiation failed', e)
+        toast.error('Failed to initiate M-Pesa payment')
+      }
     } else {
-      // Simulate COD processing
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      toast.success("Order placed! Pay on delivery.")
+      toast.success('Order placed! Pay on delivery.')
+    }
+
+    // 4. Update order status to processing
+    if (orderId) {
+      try {
+        const supabase = createBrowserSupabase()
+        await supabase.from('orders').update({ status: 'processing' }).eq('id', orderId)
+      } catch (e) {
+        console.error('Failed to update order status', e)
+      }
     }
 
     setIsLoading(false)
@@ -433,7 +588,11 @@ export default function CheckoutPage() {
               </div>
               <div className="flex justify-between text-sm text-muted-foreground">
                 <span>Shipping</span>
-                <span>{shippingMethod === "pickup" ? "KES 100" : "KES 250"}</span>
+                <span>
+                  {shippingMethod === 'pickup'
+                    ? (deliveryChargeLoading ? 'Calculating...' : (deliveryCharge !== null ? `KES ${deliveryCharge}` : '—'))
+                    : 'KES 250'}
+                </span>
               </div>
               <Separator />
               <div className="flex justify-between text-lg font-bold text-primary">
@@ -443,7 +602,7 @@ export default function CheckoutPage() {
                     style: 'currency',
                     currency: 'KES',
                     minimumFractionDigits: 0,
-                  }).format(totalPrice + (shippingMethod === "pickup" ? 100 : 250))}
+                  }).format(totalPrice + (shippingMethod === 'pickup' ? (deliveryCharge || 0) : 250))}
                 </span>
               </div>
             </CardContent>

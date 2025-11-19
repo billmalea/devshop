@@ -67,6 +67,7 @@ export default function AdminLayout({
     { label: 'Users', href: '/admin/users', icon: '👥' },
     { label: 'Products', href: '/admin/products', icon: '📦' },
     { label: 'Orders', href: '/admin/orders', icon: '🛒' },
+    { label: 'Deliveries', href: '/admin/deliveries', icon: '🚚' },
     { label: 'Inventory', href: '/admin/inventory', icon: '📈' },
     { label: 'Promotions', href: '/admin/promotions', icon: '🏷️' },
     { label: 'Content', href: '/admin/content', icon: '📝' },

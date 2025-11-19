@@ -14,20 +14,18 @@ import { Loader2, CheckCircle2, Truck, MapPin, Smartphone, Banknote } from 'luci
 import Link from "next/link"
 import { createClient as createBrowserSupabase } from "@/lib/client"
 
-// Mock Pickup Mtaani locations
-const PICKUP_LOCATIONS = [
-  { id: "nairobi-cbd", name: "Nairobi CBD - Imenti House" },
-  { id: "westlands", name: "Westlands - The Mall" },
-  { id: "roysambu", name: "Roysambu - TRM" },
-  { id: "langata", name: "Langata - Freedom Heights" },
-  { id: "mombasa", name: "Mombasa - Nyali Centre" },
-  { id: "kisumu", name: "Kisumu - Mega City" },
-]
+interface Location {
+  id: string
+  name: string
+  town?: string
+}
 
 export default function CheckoutPage() {
   const { items, totalPrice, clearCart } = useCart()
   const [isLoading, setIsLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
+  const [pickupLocations, setPickupLocations] = useState<Location[]>([])
+  const [locationsLoading, setLocationsLoading] = useState(false)
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
@@ -46,6 +44,32 @@ export default function CheckoutPage() {
     currency: 'KES',
     minimumFractionDigits: 0,
   }).format(totalPrice)
+
+  // Fetch Pickup Mtaani locations
+  useEffect(() => {
+    const fetchLocations = async () => {
+      setLocationsLoading(true)
+      try {
+        const res = await fetch('/api/pickup-mtaani/locations')
+        if (res.ok) {
+          const data = await res.json()
+          if (data.data) {
+            setPickupLocations(data.data.map((loc: { agent_location: string; town: string }) => ({
+              id: loc.agent_location,
+              name: loc.agent_location,
+              town: loc.town
+            })))
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch pickup locations', e)
+        toast.error('Could not load pickup locations')
+      } finally {
+        setLocationsLoading(false)
+      }
+    }
+    fetchLocations()
+  }, [])
 
   // Prefill from Supabase profile
   useEffect(() => {
@@ -296,14 +320,14 @@ export default function CheckoutPage() {
               ) : (
                 <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
                   <Label htmlFor="pickup-location">Select Pickup Location</Label>
-                  <Select value={pickupLocation} onValueChange={setPickupLocation}>
+                  <Select value={pickupLocation} onValueChange={setPickupLocation} disabled={locationsLoading}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a Pickup Mtaani agent" />
+                      <SelectValue placeholder={locationsLoading ? "Loading locations..." : "Select a Pickup Mtaani agent"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {PICKUP_LOCATIONS.map((loc) => (
+                      {pickupLocations.map((loc) => (
                         <SelectItem key={loc.id} value={loc.id}>
-                          {loc.name}
+                          {loc.name} {loc.town && `(${loc.town})`}
                         </SelectItem>
                       ))}
                     </SelectContent>

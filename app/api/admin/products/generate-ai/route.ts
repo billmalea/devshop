@@ -7,7 +7,7 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || '')
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { productName, brand, category, action, customPrompt } = body
+    const { productName, brand, category, action, customPrompt, imageUrl } = body
 
     if (!productName || !action) {
       return NextResponse.json(
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'generate-description') {
-      return await generateDescription(productName, brand, category, customPrompt)
+      return await generateDescription(productName, brand, category, customPrompt, imageUrl)
     } else {
       return NextResponse.json(
         { error: 'Invalid action. Only "generate-description" is supported.' },
@@ -37,10 +37,14 @@ async function generateDescription(
   productName: string,
   brand?: string,
   category?: string,
-  customPrompt?: string
+  customPrompt?: string,
+  imageUrl?: string
 ) {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
+    // Fallback to gemini-pro-vision if 1.5 is not available
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro-vision' })
+
+    let promptParts: any[] = []
 
     const basePrompt = customPrompt || `Generate a compelling product description for a tech-focused e-commerce site targeting developers, engineers, and tech professionals in Africa.
 
@@ -53,19 +57,50 @@ Style: Professional yet casual, tech-savvy, culturally aware, emphasizing qualit
 
 Please provide ONE comprehensive description (150-200 words) that combines product features, benefits, and appeal to the tech community. Make it engaging and highlight why tech professionals would love this product.
 
+Also generate:
+- 5-8 relevant tags for the product
+- Estimated weight in kg (analyze the image to estimate)
+- Estimated dimensions in cm (format: "LxWxH", analyze the image to estimate)
+
 Format your response as JSON:
 {
-  "short_description": "One catchy sentence (max 150 characters)",
-  "long_description": "Single unified description (150-200 words)",
+  "description": "Single unified description (150-200 words)",
+  "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"],
+  "weight_kg": 0.5,
+  "dimensions_cm": "20x15x5",
   "meta_title": "SEO-friendly title",
   "meta_description": "SEO description"
 }`
 
-    const prompt = customPrompt ? `${customPrompt}\n\nProduct: ${productName}\nBrand: ${brand || ''}\nCategory: ${category || ''}\n\nFormat as JSON with: short_description, long_description, meta_title, meta_description` : basePrompt
+    promptParts.push(basePrompt)
 
-    const result = await model.generateContent(prompt)
+    if (imageUrl) {
+      try {
+        console.log('Fetching image for AI context:', imageUrl)
+        const imageResponse = await fetch(imageUrl)
+        if (!imageResponse.ok) throw new Error(`Failed to fetch image: ${imageResponse.statusText}`)
+
+        const arrayBuffer = await imageResponse.arrayBuffer()
+        const base64Image = Buffer.from(arrayBuffer).toString('base64')
+
+        promptParts.push({
+          inlineData: {
+            data: base64Image,
+            mimeType: imageResponse.headers.get('content-type') || 'image/jpeg',
+          },
+        })
+        promptParts[0] += "\n\nAnalyze the provided product image to enhance the description with visual details (color, design, material, etc.)."
+      } catch (imgError) {
+        console.error('Failed to fetch image for AI context:', imgError)
+        // Continue without image if fetch fails
+      }
+    }
+
+    console.log('Sending request to Gemini...')
+    const result = await model.generateContent(promptParts)
     const response = await result.response
     const text = response.text()
+    console.log('Gemini response:', text)
 
     // Extract JSON from response
     const jsonMatch = text.match(/\{[\s\S]*\}/)

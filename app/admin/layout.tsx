@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/client'
 import {
   Menu, X, LayoutDashboard, Users, Package, ShoppingCart,
-  Truck, BarChart3, Tag, FileText, Settings, LogOut
+  Truck, BarChart3, Tag, FileText, Settings, LogOut, Folder
 } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
 import { Button } from '@/components/ui/button'
@@ -78,6 +78,7 @@ export default function AdminLayout({
     { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
     { label: 'Users', href: '/admin/users', icon: Users },
     { label: 'Products', href: '/admin/products', icon: Package },
+    { label: 'Categories', href: '/admin/categories', icon: Folder },
     { label: 'Orders', href: '/admin/orders', icon: ShoppingCart },
     { label: 'Deliveries', href: '/admin/deliveries', icon: Truck },
     { label: 'Inventory', href: '/admin/inventory', icon: BarChart3 },
@@ -115,8 +116,8 @@ export default function AdminLayout({
                 key={item.href}
                 href={item.href}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive
-                    ? 'bg-blue-500/10 text-blue-600 font-medium'
-                    : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+                  ? 'bg-blue-500/10 text-blue-600 font-medium'
+                  : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
                   }`}
                 title={!sidebarOpen ? item.label : ''}
               >

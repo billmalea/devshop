@@ -1,22 +1,23 @@
-"use client"
+'use client'
 
+import { useEffect, useState } from 'react'
 import Link from "next/link"
-import { useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { createClient } from '@/lib/client'
 
 interface ProductFiltersProps {
   currentCategory?: string
   currentBrand?: string
 }
 
-const categories = [
-  { value: 'hoodies', label: 'Hoodies' },
-  { value: 'stickers', label: 'Stickers' },
-  { value: 'sweatshirts', label: 'Sweatshirts' },
-  { value: 'headbands', label: 'Headbands' },
-]
+interface Category {
+  id: string
+  name: string
+  slug: string
+  parent_id?: string
+}
 
 const brands = [
   'Amazon',
@@ -26,29 +27,54 @@ const brands = [
   'Google',
   'Microsoft',
   'Uber',
+  'Apple',
+  'Meta',
+  'Netflix',
+  'Tesla',
+  'OpenAI',
+  'GitHub',
+  'Docker',
+  'Kubernetes',
+  'React',
+  'Next.js',
+  'TypeScript',
+  'Python',
+  'JavaScript',
+]
+
+// Fallback categories in case database fetch fails
+const fallbackCategories = [
+  { id: '1', name: 'Apparel', slug: 'apparel' },
+  { id: '2', name: 'Accessories', slug: 'accessories' },
+  { id: '3', name: 'Drinkware', slug: 'drinkware' },
 ]
 
 export function ProductFilters({ currentCategory, currentBrand }: ProductFiltersProps) {
-  const searchParams = useSearchParams()
+  const [categories, setCategories] = useState<Category[]>(fallbackCategories)
+  const [loading, setLoading] = useState(true)
 
-  const buildUrl = (type: 'category' | 'brand', value: string) => {
-    const params = new URLSearchParams(searchParams.toString())
-    
-    if (type === 'category') {
-      if (currentCategory === value) {
-        params.delete('category')
-      } else {
-        params.set('category', value)
+  useEffect(() => {
+    fetchCategories()
+  }, [])
+
+  const fetchCategories = async () => {
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .is('parent_id', null) // Only get main categories
+        .order('name', { ascending: true })
+
+      if (!error && data) {
+        setCategories(data)
       }
-    } else {
-      if (currentBrand === value) {
-        params.delete('brand')
-      } else {
-        params.set('brand', value)
-      }
+    } catch (error) {
+      console.error('Failed to fetch categories, using fallback:', error)
+      // categories already set to fallbackCategories
+    } finally {
+      setLoading(false)
     }
-    
-    return `/products?${params.toString()}`
   }
 
   return (
@@ -67,18 +93,22 @@ export function ProductFilters({ currentCategory, currentBrand }: ProductFilters
           >
             All Categories
           </Link>
-          {categories.map((category) => (
-            <Link
-              key={category.value}
-              href={buildUrl('category', category.value)}
-              className={cn(
-                "block rounded-md px-3 py-2 text-sm transition-colors hover:bg-secondary",
-                currentCategory === category.value && "bg-primary/10 text-primary font-medium"
-              )}
-            >
-              {category.label}
-            </Link>
-          ))}
+          {loading ? (
+            <div className="px-3 py-2 text-sm text-muted-foreground">Loading...</div>
+          ) : (
+            categories.map((category) => (
+              <Link
+                key={category.id}
+                href={`/products?category=${category.slug}`}
+                className={cn(
+                  "block rounded-md px-3 py-2 text-sm transition-colors hover:bg-secondary",
+                  currentCategory === category.slug && "bg-primary/10 text-primary font-medium"
+                )}
+              >
+                {category.name}
+              </Link>
+            ))
+          )}
         </CardContent>
       </Card>
 
@@ -88,7 +118,10 @@ export function ProductFilters({ currentCategory, currentBrand }: ProductFilters
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
           {brands.map((brand) => (
-            <Link key={brand} href={buildUrl('brand', brand)}>
+            <Link
+              key={brand}
+              href={currentBrand === brand ? '/products' : `/products?brand=${brand}`}
+            >
               <Badge
                 variant={currentBrand === brand ? "default" : "outline"}
                 className={cn(

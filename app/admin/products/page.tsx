@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/client'
-import { Trash2, Edit2, Search, Plus, Sparkles, Image as ImageIcon, Grid3x3, List, ChevronDown, ChevronUp } from 'lucide-react'
+import { Trash2, Edit2, Search, Plus, Sparkles, Image as ImageIcon, Grid3x3, List, ChevronDown, ChevronUp, Upload, Loader2, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
+import { formatProductData } from '@/lib/format'
 
 interface Product {
   id: string
@@ -20,6 +21,7 @@ interface Product {
   sub_category?: string
   brand: string
   image_url?: string
+  images?: string[]
   stock: number
   sku?: string
   tags?: string[]
@@ -37,6 +39,20 @@ interface Product {
   created_at?: string
   updated_at?: string
 }
+
+const COLORS = [
+  { name: 'Black', class: 'bg-black', border: 'border-gray-200' },
+  { name: 'White', class: 'bg-white', border: 'border-gray-300' },
+  { name: 'Gray', class: 'bg-gray-500', border: 'border-transparent' },
+  { name: 'Navy', class: 'bg-blue-900', border: 'border-transparent' },
+  { name: 'Blue', class: 'bg-blue-600', border: 'border-transparent' },
+  { name: 'Red', class: 'bg-red-600', border: 'border-transparent' },
+  { name: 'Green', class: 'bg-green-600', border: 'border-transparent' },
+  { name: 'Yellow', class: 'bg-yellow-400', border: 'border-transparent' },
+  { name: 'Purple', class: 'bg-purple-600', border: 'border-transparent' },
+]
+
+const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL']
 
 // Collapsible Section Component
 const FormSection = ({
@@ -84,6 +100,7 @@ export default function ProductsPage() {
   const [total, setTotal] = useState(0)
   const pageSize = 50
   const [generatingAI, setGeneratingAI] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [showPromptInputs, setShowPromptInputs] = useState(false)
   const [descriptionPrompt, setDescriptionPrompt] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table')
@@ -97,10 +114,11 @@ export default function ProductsPage() {
     sub_category: '',
     brand: '',
     image_url: '',
+    images: [] as string[],
     stock: '',
     sku: '',
     tags: '',
-    colors: '',
+    colors: 'Black', // Default to Black
     sizes: '',
     weight_kg: '',
     dimensions_cm: '',
@@ -109,9 +127,47 @@ export default function ProductsPage() {
     discount_percentage: '0',
   })
 
+  const [isRestored, setIsRestored] = useState(false)
+
+  useEffect(() => {
+    const savedState = localStorage.getItem('product_form_state')
+    if (savedState) {
+      try {
+        const { formData: savedData, editingProduct: savedEditing, showForm: savedShow } = JSON.parse(savedState)
+        setFormData(savedData)
+        setEditingProduct(savedEditing)
+        setShowForm(savedShow)
+      } catch (e) {
+        console.error('Error parsing saved state', e)
+      }
+    }
+    setIsRestored(true)
+  }, [])
+
+  useEffect(() => {
+    if (isRestored) {
+      const state = { formData, editingProduct, showForm }
+      localStorage.setItem('product_form_state', JSON.stringify(state))
+    }
+  }, [formData, editingProduct, showForm, isRestored])
+
   useEffect(() => {
     fetchProducts()
   }, [page, searchTerm])
+
+  // Auto-generate SKU when name and brand change
+  useEffect(() => {
+    if (formData.name && formData.brand && !editingProduct) {
+      const brandCode = formData.brand.substring(0, 3).toUpperCase()
+      const nameCode = formData.name.substring(0, 3).toUpperCase().replace(/\s/g, '')
+      const randomNum = Math.floor(1000 + Math.random() * 9000)
+      const generatedSKU = `${brandCode}-${nameCode}-${randomNum}`
+
+      if (!formData.sku) {
+        setFormData(prev => ({ ...prev, sku: generatedSKU }))
+      }
+    }
+  }, [formData.name, formData.brand, editingProduct])
 
   const fetchProducts = async () => {
     setLoading(true)
@@ -146,7 +202,8 @@ export default function ProductsPage() {
     try {
       const supabase = createClient()
 
-      const productData = {
+      // Prepare raw product data
+      const rawProductData = {
         name: formData.name,
         short_description: formData.short_description,
         long_description: formData.long_description,
@@ -156,6 +213,7 @@ export default function ProductsPage() {
         sub_category: formData.sub_category || formData.category,
         brand: formData.brand,
         image_url: formData.image_url,
+        images: formData.images,
         stock: parseInt(formData.stock),
         sku: formData.sku || undefined,
         tags: formData.tags ? formData.tags.split(',').map(t => t.trim()) : [],
@@ -167,6 +225,9 @@ export default function ProductsPage() {
         is_active: formData.is_active,
         discount_percentage: parseInt(formData.discount_percentage),
       }
+
+      // Format the data for consistent capitalization
+      const productData = formatProductData(rawProductData)
 
       if (editingProduct) {
         // Update existing product
@@ -188,6 +249,7 @@ export default function ProductsPage() {
         alert('Product added successfully!')
       }
 
+      localStorage.removeItem('product_form_state')
       resetForm()
       fetchProducts()
     } catch (error) {
@@ -197,6 +259,7 @@ export default function ProductsPage() {
   }
 
   const resetForm = () => {
+    localStorage.removeItem('product_form_state')
     setFormData({
       name: '',
       short_description: '',
@@ -207,10 +270,11 @@ export default function ProductsPage() {
       sub_category: '',
       brand: '',
       image_url: '',
+      images: [],
       stock: '',
       sku: '',
       tags: '',
-      colors: '',
+      colors: 'Black',
       sizes: '',
       weight_kg: '',
       dimensions_cm: '',
@@ -234,10 +298,11 @@ export default function ProductsPage() {
       sub_category: product.sub_category || product.category,
       brand: product.brand,
       image_url: product.image_url || '',
+      images: product.images || [],
       stock: product.stock.toString(),
       sku: product.sku || '',
       tags: product.tags?.join(', ') || '',
-      colors: product.colors?.join(', ') || '',
+      colors: product.colors?.join(', ') || 'Black',
       sizes: product.sizes?.join(', ') || '',
       weight_kg: product.weight_kg?.toString() || '',
       dimensions_cm: product.dimensions_cm || '',
@@ -248,11 +313,129 @@ export default function ProductsPage() {
     setShowForm(true)
   }
 
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [selectedGalleryFiles, setSelectedGalleryFiles] = useState<File[]>([])
+
+  // ... existing useEffects ...
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setSelectedFile(file)
+      setPreviewUrl(URL.createObjectURL(file))
+    }
+  }
+
+  const handleUpload = async () => {
+    if (!selectedFile) return
+
+    setUploading(true)
+    try {
+      const supabase = createClient()
+      const fileExt = selectedFile.name.split('.').pop()
+      const fileName = `${Date.now()}.${fileExt}`
+      const { data, error } = await supabase.storage
+        .from('products')
+        .upload(fileName, selectedFile)
+
+      if (error) throw error
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('products')
+        .getPublicUrl(fileName)
+
+      setFormData({ ...formData, image_url: publicUrl })
+      setSelectedFile(null)
+      setPreviewUrl(null)
+      alert('Image uploaded successfully!')
+    } catch (error) {
+      console.error('Upload error:', error)
+      alert('Failed to upload image')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const removeImage = () => {
+    setFormData({ ...formData, image_url: '' })
+    setSelectedFile(null)
+    setPreviewUrl(null)
+  }
+
+  const cancelSelection = () => {
+    setSelectedFile(null)
+    setPreviewUrl(null)
+  }
+
+  const handleGallerySelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    const newFiles = Array.from(files)
+    setSelectedGalleryFiles(prev => [...prev, ...newFiles])
+  }
+
+  const handleGalleryUpload = async () => {
+    if (selectedGalleryFiles.length === 0) return
+
+    setUploading(true)
+    try {
+      const supabase = createClient()
+      const newImages: string[] = []
+
+      for (let i = 0; i < selectedGalleryFiles.length; i++) {
+        const file = selectedGalleryFiles[i]
+        const fileExt = file.name.split('.').pop()
+        const fileName = `gallery/${Date.now()}-${i}.${fileExt}`
+        const { error } = await supabase.storage
+          .from('products')
+          .upload(fileName, file)
+
+        if (error) throw error
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('products')
+          .getPublicUrl(fileName)
+
+        newImages.push(publicUrl)
+      }
+
+      setFormData(prev => ({ ...prev, images: [...(prev.images || []), ...newImages] }))
+      setSelectedGalleryFiles([])
+      alert(`${newImages.length} images uploaded to gallery!`)
+    } catch (error) {
+      console.error('Gallery upload error:', error)
+      alert('Failed to upload gallery images')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const removeSelectedGalleryFile = (index: number) => {
+    setSelectedGalleryFiles(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const removeGalleryImage = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      images: (prev.images || []).filter((_, i) => i !== index)
+    }))
+  }
+
   const generateAIContent = async () => {
+    console.log('generateAIContent called')
+    // ... (rest of generateAIContent)
     if (!formData.name || !formData.brand) {
       alert('Please enter product name and brand first')
       return
     }
+
+    console.log('Starting generation with:', {
+      name: formData.name,
+      brand: formData.brand,
+      image: formData.image_url
+    })
 
     setGeneratingAI(true)
     try {
@@ -265,19 +448,25 @@ export default function ProductsPage() {
           category: formData.sub_category || formData.category,
           action: 'generate-description',
           customPrompt: descriptionPrompt || undefined,
+          imageUrl: formData.image_url || undefined,
         }),
       })
 
+      console.log('API Response status:', response.status)
       const result = await response.json()
+      console.log('API Result:', result)
 
       if (result.success) {
-        setFormData({
-          ...formData,
-          short_description: result.short_description,
-          long_description: result.long_description,
-        })
-        alert('AI description generated!')
+        setFormData(prev => ({
+          ...prev,
+          long_description: result.description,
+          tags: result.tags.join(', '),
+          weight_kg: result.weight_kg?.toString() || prev.weight_kg,
+          dimensions_cm: result.dimensions_cm || prev.dimensions_cm,
+        }))
+        alert('AI description and tags generated!')
       } else {
+        console.error('API Error:', result.error)
         alert(result.error || 'Failed to generate content')
       }
     } catch (error) {
@@ -304,6 +493,28 @@ export default function ProductsPage() {
     } catch (error) {
       console.error('Failed to delete product:', error)
     }
+  }
+
+  const toggleColor = (color: string) => {
+    const currentColors = formData.colors ? formData.colors.split(',').map(c => c.trim()).filter(c => c) : []
+    let newColors
+    if (currentColors.includes(color)) {
+      newColors = currentColors.filter(c => c !== color)
+    } else {
+      newColors = [...currentColors, color]
+    }
+    setFormData({ ...formData, colors: newColors.join(', ') })
+  }
+
+  const toggleSize = (size: string) => {
+    const currentSizes = formData.sizes ? formData.sizes.split(',').map(s => s.trim()).filter(s => s) : []
+    let newSizes
+    if (currentSizes.includes(size)) {
+      newSizes = currentSizes.filter(s => s !== size)
+    } else {
+      newSizes = [...currentSizes, size]
+    }
+    setFormData({ ...formData, sizes: newSizes.join(', ') })
   }
 
   if (loading && products.length === 0) {
@@ -390,8 +601,149 @@ export default function ProductsPage() {
               </div>
             </FormSection>
 
+            {/* Image Upload */}
+            <FormSection title="Product Image">
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-full max-w-md">
+                  {!formData.image_url && !previewUrl && (
+                    <label className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-border rounded-lg cursor-pointer bg-secondary/20 hover:bg-secondary/40 transition-colors relative overflow-hidden">
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <Upload className="w-10 h-10 mb-3 text-muted-foreground" />
+                        <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">Click to select</span> or drag and drop</p>
+                        <p className="text-xs text-muted-foreground">SVG, PNG, JPG or GIF (MAX. 800x400px)</p>
+                      </div>
+                      <input type="file" className="hidden" onChange={handleFileSelect} accept="image/*" />
+                    </label>
+                  )}
+
+                  {previewUrl && !formData.image_url && (
+                    <div className="relative w-full h-64 border border-border rounded-lg overflow-hidden bg-secondary/20">
+                      <img src={previewUrl} alt="Preview" className="w-full h-full object-contain" />
+                      <div className="absolute bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-sm flex justify-center gap-2">
+                        <Button type="button" onClick={handleUpload} disabled={uploading} className="bg-blue-600 text-white">
+                          {uploading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Upload className="w-4 h-4 mr-2" />}
+                          Upload Image
+                        </Button>
+                        <Button type="button" variant="outline" onClick={cancelSelection} disabled={uploading}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {formData.image_url && (
+                    <div className="relative w-full h-64 border border-border rounded-lg overflow-hidden bg-secondary/20">
+                      <img src={formData.image_url} alt="Uploaded" className="w-full h-full object-contain" />
+                      <div className="absolute top-2 right-2">
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={removeImage}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <div className="absolute bottom-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full flex items-center">
+                        <Check className="w-3 h-3 mr-1" /> Uploaded
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </FormSection>
+
+            {/* Product Gallery */}
+            <FormSection title="Product Gallery (Optional)">
+              <div className="space-y-4">
+                {/* Uploaded Images */}
+                {formData.images && formData.images.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">Uploaded Images</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {formData.images.map((img: string, index: number) => (
+                        <div key={index} className="relative aspect-square border border-border rounded-lg overflow-hidden group">
+                          <img src={img} alt={`Gallery ${index + 1}`} className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => removeGalleryImage(index)}
+                            className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                          <div className="absolute bottom-1 right-1 bg-green-500 text-white text-xs px-1 py-0.5 rounded">
+                            <Check size={10} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Selected Files (Not Uploaded Yet) */}
+                {selectedGalleryFiles.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">Selected Files</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {selectedGalleryFiles.map((file: File, index: number) => (
+                        <div key={index} className="relative aspect-square border border-blue-500 border-dashed rounded-lg overflow-hidden group">
+                          <img
+                            src={URL.createObjectURL(file)}
+                            alt={`Selected ${index + 1}`}
+                            className="w-full h-full object-cover opacity-70"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeSelectedGalleryFile(index)}
+                            className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                          <div className="absolute bottom-1 right-1 bg-blue-500 text-white text-xs px-1 py-0.5 rounded">
+                            Pending
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex gap-2 mt-4">
+                      <Button
+                        type="button"
+                        onClick={handleGalleryUpload}
+                        disabled={uploading}
+                        className="bg-blue-600 text-white"
+                      >
+                        {uploading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Upload className="w-4 h-4 mr-2" />}
+                        Upload {selectedGalleryFiles.length} Image{selectedGalleryFiles.length !== 1 ? 's' : ''}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setSelectedGalleryFiles([])}
+                        disabled={uploading}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Add Files Button */}
+                <label className="flex flex-col items-center justify-center aspect-square max-w-[200px] border-2 border-dashed border-border rounded-lg cursor-pointer bg-secondary/20 hover:bg-secondary/40 transition-colors">
+                  <Plus className="w-8 h-8 text-muted-foreground mb-2" />
+                  <span className="text-xs text-muted-foreground">Select Images</span>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleGallerySelect}
+                  />
+                </label>
+              </div>
+            </FormSection>
+
             {/* Descriptions with AI */}
-            <FormSection title="Descriptions">
+            <FormSection title="Descriptions (AI Powered)">
               <div className="flex justify-end gap-2 mb-4">
                 <Button
                   type="button"
@@ -404,20 +756,41 @@ export default function ProductsPage() {
                 <Button
                   type="button"
                   onClick={generateAIContent}
-                  disabled={generatingAI}
+                  disabled={generatingAI || !formData.image_url || !formData.name || !formData.brand}
                   size="sm"
-                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                  className="bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-50"
                 >
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  {generatingAI ? 'Generating...' : 'Generate with AI'}
+                  {generatingAI ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                  {generatingAI ? 'Generating...' : 'Generate from Image'}
                 </Button>
               </div>
+
+              {/* Validation Messages */}
+              {(!formData.name || !formData.brand || !formData.image_url) && (
+                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm font-medium text-yellow-800 mb-2">⚠️ Missing Required Fields:</p>
+                  <ul className="text-sm text-yellow-700 space-y-1 list-disc list-inside">
+                    {!formData.name && <li>Product Name is required</li>}
+                    {!formData.brand && <li>Brand is required</li>}
+                    {!formData.image_url && <li>Upload a product image first</li>}
+                  </ul>
+                </div>
+              )}
+
+              {generatingAI && (
+                <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                  <div className="flex items-center gap-2 text-purple-700">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <p className="text-sm font-medium">Generating AI content from your image...</p>
+                  </div>
+                </div>
+              )}
 
               {showPromptInputs && (
                 <div className="mb-4 p-4 bg-secondary/50 rounded-xl border border-border">
                   <label className="block text-sm font-medium mb-2 text-foreground">Custom Description Prompt (optional)</label>
                   <textarea
-                    placeholder="Leave empty for default: Tech-focused description for African developers. Or customize: 'Write a funny description for gamers...'"
+                    placeholder="Leave empty for default: Tech-focused description for African developers..."
                     value={descriptionPrompt}
                     onChange={(e) => setDescriptionPrompt(e.target.value)}
                     className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -430,19 +803,13 @@ export default function ProductsPage() {
               )}
 
               <div className="space-y-3">
-                <Input
-                  type="text"
-                  placeholder="Short Description (150 chars max)"
-                  value={formData.short_description}
-                  onChange={(e) => setFormData({ ...formData, short_description: e.target.value })}
-                  maxLength={150}
-                />
+                <label className="text-sm font-medium">Product Description</label>
                 <textarea
-                  placeholder="Long Description (detailed product info)"
+                  placeholder="Detailed product description (AI-generated or manual)"
                   value={formData.long_description}
                   onChange={(e) => setFormData({ ...formData, long_description: e.target.value })}
                   className="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-blue-600"
-                  rows={4}
+                  rows={6}
                 />
               </div>
             </FormSection>
@@ -507,25 +874,59 @@ export default function ProductsPage() {
 
             {/* Product Variants */}
             <FormSection title="Variants">
-              <div className="grid grid-cols-2 gap-4">
-                <Input
-                  type="text"
-                  placeholder="Colors (e.g., Black, White, Gray)"
-                  value={formData.colors}
-                  onChange={(e) => setFormData({ ...formData, colors: e.target.value })}
-                />
-                <Input
-                  type="text"
-                  placeholder="Sizes (e.g., S, M, L, XL)"
-                  value={formData.sizes}
-                  onChange={(e) => setFormData({ ...formData, sizes: e.target.value })}
-                />
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-foreground">Colors</label>
+                  <div className="flex flex-wrap gap-3">
+                    {COLORS.map((color) => (
+                      <button
+                        key={color.name}
+                        type="button"
+                        onClick={() => toggleColor(color.name)}
+                        className={cn(
+                          "w-8 h-8 rounded-full flex items-center justify-center transition-all ring-2 ring-offset-2 ring-offset-background",
+                          color.class,
+                          color.border,
+                          formData.colors.includes(color.name) ? "ring-blue-600 scale-110" : "ring-transparent hover:scale-105"
+                        )}
+                        title={color.name}
+                      >
+                        {formData.colors.includes(color.name) && (
+                          <Check size={14} className={cn("text-white", color.name === 'White' || color.name === 'Yellow' ? 'text-black' : '')} />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">Selected: {formData.colors}</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-foreground">Sizes</label>
+                  <div className="flex flex-wrap gap-2">
+                    {SIZES.map((size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() => toggleSize(size)}
+                        className={cn(
+                          "px-3 py-1 rounded-md text-sm font-medium border transition-colors",
+                          formData.sizes.includes(size)
+                            ? "bg-blue-600 text-white border-blue-600"
+                            : "bg-background text-foreground border-border hover:border-blue-500"
+                        )}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">Selected: {formData.sizes}</p>
+                </div>
+
                 <Input
                   type="text"
                   placeholder="Tags (e.g., new, sale, trending)"
                   value={formData.tags}
                   onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                  className="col-span-2"
                 />
               </div>
             </FormSection>
@@ -547,19 +948,6 @@ export default function ProductsPage() {
                   onChange={(e) => setFormData({ ...formData, dimensions_cm: e.target.value })}
                 />
               </div>
-            </FormSection>
-
-            {/* Image */}
-            <FormSection title="Product Image">
-              <Input
-                type="text"
-                placeholder="Image URL"
-                value={formData.image_url}
-                onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-              />
-              {formData.image_url && (
-                <img src={formData.image_url} alt="Preview" className="mt-3 h-32 w-32 object-cover rounded-lg border border-border" />
-              )}
             </FormSection>
 
             {/* Settings */}

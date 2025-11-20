@@ -78,7 +78,7 @@ export default async function ProductsPage({
 
       <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
         {/* Desktop Sidebar */}
-        <aside className="hidden lg:block lg:w-64 flex-shrink-0">
+        <aside className="hidden lg:block lg:w-64 flex-shrink-0 sticky top-24 h-fit">
           <ProductFilters
             currentCategory={params.category}
             currentBrand={params.brand}

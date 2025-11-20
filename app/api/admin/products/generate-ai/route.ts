@@ -88,6 +88,12 @@ Format your response as JSON:
   }
 }
 
+import Replicate from 'replicate'
+
+const replicate = new Replicate({
+  auth: process.env.REPLICATE_API_TOKEN,
+})
+
 async function generateImage(
   productName: string,
   brand?: string,
@@ -95,91 +101,71 @@ async function generateImage(
   customPrompt?: string
 ) {
   try {
-    // Use Gemini 2.5 Flash Image (nano banana) for image generation
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-image' })
-    
-    // Craft a detailed prompt for product image
-    let basePrompt = ''
+    // Craft a detailed prompt for Flux.1
+    let prompt = ''
     
     if (!customPrompt) {
-      // Default prompts with African models for apparel
+      // Enhanced prompts for Flux.1
       if (category === 'hoodies') {
-        basePrompt = `Professional product photography: Young African ${Math.random() > 0.5 ? 'man' : 'woman'} wearing ${productName}${brand ? ` ${brand} branded` : ''} hoodie. 
-Modern tech office or urban setting background. Natural confident pose, showing hoodie design clearly.
-Studio lighting, sharp focus, fashion photography style. Model represents tech professional/developer.
-High resolution, professional e-commerce photo, no text overlays, no watermarks.`
+        prompt = `Professional product photography of a young African ${Math.random() > 0.5 ? 'man' : 'woman'} wearing a high quality ${productName} hoodie${brand ? ` with "${brand}" written on it` : ''}. The text "${brand || ''}" should be clearly visible and spelled correctly on the chest. Modern tech office background with blurred code on screens. Cinematic lighting, 8k resolution, photorealistic, highly detailed fabric texture.`
       } else if (category === 'tshirts') {
-        basePrompt = `Professional product photography: Young African ${Math.random() > 0.5 ? 'man' : 'woman'} wearing ${productName}${brand ? ` ${brand} branded` : ''} t-shirt.
-Tech workspace or modern office background. Casual confident pose, t-shirt design visible.
-Studio lighting, sharp focus, lifestyle photography. Model represents developer/tech professional.
-High resolution, professional e-commerce photo, no text overlays, no watermarks.`
-      } else if (category === 'sweatshirts') {
-        basePrompt = `Professional product photography: Young African ${Math.random() > 0.5 ? 'man' : 'woman'} wearing ${productName}${brand ? ` ${brand} branded` : ''} sweatshirt.
-Modern tech environment or creative workspace. Natural pose, sweatshirt design clearly shown.
-Studio lighting, sharp focus, lifestyle photography. Model represents tech enthusiast.
-High resolution, professional e-commerce photo, no text overlays, no watermarks.`
+        prompt = `Professional product photography of a young African ${Math.random() > 0.5 ? 'man' : 'woman'} wearing a fitted ${productName} t-shirt${brand ? ` with the text "${brand}" printed on it` : ''}. The text "${brand || ''}" is legible and sharp. Tech workspace setting, warm lighting, depth of field. 8k resolution, photorealistic, detailed skin texture.`
       } else if (category === 'stickers') {
-        basePrompt = `High-quality product photography of ${productName}${brand ? ` ${brand}` : ''} sticker collection.
-${brand === 'Amazon' || brand === 'AWS' ? 'AWS/Amazon themed tech stickers arranged artistically' : ''}
-${brand === 'Google' ? 'Colorful Google product stickers (Chrome, Android, Cloud) arranged nicely' : ''}
-${brand === 'Microsoft' ? 'Microsoft Azure, Windows, VS Code stickers arranged professionally' : ''}
-${brand === 'Vercel' ? 'Minimalist Vercel triangle logo stickers, modern arrangement' : ''}
-${brand === 'Anthropic' ? 'Claude AI and Anthropic themed stickers, tech aesthetic' : ''}
-${brand === 'GitHub' ? 'GitHub octocat and dev tool stickers, developer theme' : ''}
-Clean white background or laptop surface, glossy finish, professional product photography.
-High resolution, sharp focus, no text overlays, no watermarks.`
-      } else if (category === 'headbands') {
-        basePrompt = `Professional product photography: Young African ${Math.random() > 0.5 ? 'man' : 'woman'} wearing ${productName}${brand ? ` ${brand} branded` : ''} headband.
-Athletic or casual tech setting. Natural pose, headband design visible.
-Studio lighting, sharp focus, lifestyle photography.
-High resolution, professional e-commerce photo, no text overlays, no watermarks.`
+        prompt = `A high quality die-cut sticker of the ${brand || productName} logo on a silver MacBook Pro laptop lid. The sticker says "${brand || productName}". Sharp focus, studio lighting, 4k resolution, product photography.`
+      } else if (category === 'mugs') {
+        prompt = `A ceramic coffee mug sitting on a wooden desk next to a laptop with code on the screen. The mug has the text "${brand || productName}" printed on it. The text is spelled correctly and clearly visible. Warm cozy lighting, bokeh effect, photorealistic 8k.`
       } else {
-        basePrompt = `Professional product photography of ${productName}${brand ? ` from ${brand}` : ''}.
-Clean background, studio lighting, sharp focus, high resolution.
-Professional e-commerce style, no text overlays, no watermarks.`
+        prompt = `Professional product photography of ${productName}${brand ? ` by ${brand}` : ''}. Studio lighting, clean background, 8k resolution, photorealistic.`
       }
     } else {
-      basePrompt = customPrompt
+      prompt = customPrompt
     }
-    
-    const prompt = basePrompt
 
-    // Generate image with Gemini 2.5 Flash Image (nano banana)
-    const result = await model.generateContent(prompt)
+    console.log('Generating image with Flux.1 using prompt:', prompt)
 
-    const response = result.response
-    
-    // Get the image from the response
-    // Gemini 2.5 Flash Image returns base64 encoded image data
-    let imageDataUrl = null
-    
-    for (const part of response.candidates?.[0]?.content?.parts || []) {
-      if ('inlineData' in part && part.inlineData) {
-        const imageBase64 = part.inlineData.data
-        const mimeType = part.inlineData.mimeType || 'image/png'
-        
-        // Convert base64 to data URL (browser can display directly)
-        imageDataUrl = `data:${mimeType};base64,${imageBase64}`
-        break
+    const output = await replicate.run(
+      "black-forest-labs/flux-schnell",
+      {
+        input: {
+          prompt: prompt,
+          go_fast: true,
+          megapixels: "1",
+          num_outputs: 1,
+          aspect_ratio: "1:1",
+          output_format: "webp",
+          output_quality: 80
+        }
       }
-    }
-    
-    if (!imageDataUrl) {
-      throw new Error('No image data returned from Gemini 2.5 Flash Image')
+    )
+
+    // Flux returns an array of ReadableStreams or URLs
+    // The output is usually an array of strings (URLs)
+    const imageUrl = Array.isArray(output) ? output[0] : output
+
+    if (!imageUrl) {
+      throw new Error('No image URL returned from Replicate')
     }
 
-    console.log('Image generated successfully with nano banana 🍌')
+    // For the browser to display it, we might need to fetch and convert to base64 
+    // if the URL is temporary or restricted, but Replicate URLs are usually public for a short time.
+    // Ideally, we should upload this to our own storage (Supabase Storage), 
+    // but for now we'll return the URL directly or convert to base64 if needed.
+    // Let's fetch and convert to base64 to be safe and consistent with previous implementation.
+    
+    const imageRes = await fetch(String(imageUrl))
+    const imageBuffer = await imageRes.arrayBuffer()
+    const base64Image = Buffer.from(imageBuffer).toString('base64')
+    const dataUrl = `data:image/webp;base64,${base64Image}`
 
     return NextResponse.json({
       success: true,
-      image_url: imageDataUrl,
+      image_url: dataUrl,
       ai_generated: true,
-      model: 'Gemini 2.5 Flash Image (nano banana 🍌)',
-      note: 'Image includes SynthID watermark (invisible to humans, detectable by tools)',
+      model: 'Flux.1 Schnell',
     })
+
   } catch (error) {
     console.error('Image generation error:', error)
-    
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to generate image',

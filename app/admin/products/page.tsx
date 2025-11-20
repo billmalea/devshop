@@ -450,6 +450,7 @@ export default function ProductsPage() {
                   <option value="tshirts">T-Shirts</option>
                   <option value="sweatshirts">Sweatshirts</option>
                   <option value="stickers">Stickers</option>
+                  <option value="mugs">Mugs</option>
                   <option value="headbands">Headbands</option>
                 </select>
               </div>

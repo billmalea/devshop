@@ -536,33 +536,7 @@ export default function ProductsPage() {
             <div className="border-b border-border pb-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-semibold text-foreground">Product Image</h3>
-                <Button
-                  type="button"
-                  onClick={() => generateAIContent('image')}
-                  disabled={generatingAI}
-                  size="sm"
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  <ImageIcon className="h-4 w-4 mr-2" />
-                  {generatingAI ? 'Generating...' : 'Generate Image'}
-                </Button>
               </div>
-
-              {showPromptInputs && (
-                <div className="mb-4 p-4 bg-secondary/50 rounded-xl border border-border">
-                  <label className="block text-sm font-medium mb-2 text-foreground">Custom Image Prompt (optional)</label>
-                  <textarea
-                    placeholder="Leave empty for default: African models wearing apparel in tech settings, or brand-specific sticker photos. Customize: 'Person in coffee shop wearing...'"
-                    value={imagePrompt}
-                    onChange={(e) => setImagePrompt(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    rows={2}
-                  />
-                  <p className="text-xs text-muted-foreground mt-2">
-                    💡 Default: African men/women models for apparel, brand-themed sticker arrangements
-                  </p>
-                </div>
-              )}
 
               <Input
                 type="text"

@@ -11,6 +11,8 @@ import {
 import type { User } from '@supabase/supabase-js'
 import { Button } from '@/components/ui/button'
 
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+
 export default function AdminLayout({
   children,
 }: {
@@ -88,10 +90,58 @@ export default function AdminLayout({
     { label: 'Settings', href: '/admin/settings', icon: Settings },
   ]
 
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full">
+      <div className="p-4 flex items-center justify-between border-b border-border">
+        <Link href="/admin" className="flex items-center gap-2 font-heading font-bold text-xl">
+          <span className="text-foreground">DevShop</span>
+          <span className="text-blue-600">.</span>
+        </Link>
+      </div>
+
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        {menuItems.map((item) => {
+          const Icon = item.icon
+          const isActive = pathname === item.href
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive
+                ? 'bg-blue-500/10 text-blue-600 font-medium'
+                : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+                }`}
+            >
+              <Icon size={20} />
+              <span>{item.label}</span>
+            </Link>
+          )
+        })}
+      </nav>
+
+      <div className="p-4 border-t border-border">
+        <div className="mb-3">
+          <p className="text-xs text-muted-foreground mb-1">Signed in as</p>
+          <p className="text-sm font-medium text-foreground truncate">{user?.email}</p>
+        </div>
+        <Button
+          asChild
+          variant="ghost"
+          className="w-full justify-start text-muted-foreground hover:text-foreground hover:bg-secondary"
+        >
+          <Link href="/auth/logout">
+            <LogOut size={20} />
+            <span className="ml-3">Logout</span>
+          </Link>
+        </Button>
+      </div>
+    </div>
+  )
+
   return (
     <div className="flex h-screen bg-background">
-      {/* Sidebar */}
-      <div className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-background border-r border-border transition-all duration-300 flex flex-col`}>
+      {/* Desktop Sidebar */}
+      <div className={`hidden md:flex ${sidebarOpen ? 'w-64' : 'w-20'} bg-background border-r border-border transition-all duration-300 flex-col`}>
         <div className="p-4 flex items-center justify-between border-b border-border">
           {sidebarOpen && (
             <Link href="/admin" className="flex items-center gap-2 font-heading font-bold text-xl">
@@ -152,10 +202,24 @@ export default function AdminLayout({
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
-        <div className="bg-background border-b border-border px-6 py-4 flex justify-between items-center">
-          <div>
-            <h2 className="text-2xl font-heading font-bold text-foreground">Admin Panel</h2>
-            <p className="text-sm text-muted-foreground mt-1">Manage your DevShop store</p>
+        <div className="bg-background border-b border-border px-4 md:px-6 py-4 flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            {/* Mobile Menu Trigger */}
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="md:hidden">
+                  <Menu className="h-6 w-6" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="p-0 w-72">
+                <SidebarContent />
+              </SheetContent>
+            </Sheet>
+
+            <div>
+              <h2 className="text-xl md:text-2xl font-heading font-bold text-foreground">Admin Panel</h2>
+              <p className="text-xs md:text-sm text-muted-foreground mt-1 hidden sm:block">Manage your DevShop store</p>
+            </div>
           </div>
           <div className="flex items-center gap-4">
             <Button asChild variant="outline" size="sm">
@@ -166,7 +230,7 @@ export default function AdminLayout({
 
         {/* Content */}
         <div className="flex-1 overflow-auto bg-secondary/20">
-          <div className="p-6 max-w-7xl mx-auto">
+          <div className="p-4 md:p-6 max-w-7xl mx-auto">
             {children}
           </div>
         </div>

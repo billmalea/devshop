@@ -149,12 +149,12 @@ export default function CategoriesPage() {
     }
 
     return (
-        <div className="container mx-auto p-6 max-w-6xl">
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-heading font-bold">Category Management</h1>
+        <div className="container mx-auto p-4 md:p-6 max-w-6xl">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                <h1 className="text-2xl md:text-3xl font-heading font-bold">Category Management</h1>
                 <Button
                     onClick={() => setShowAddForm(!showAddForm)}
-                    className="bg-blue-600 text-white"
+                    className="bg-blue-600 text-white w-full md:w-auto"
                 >
                     <Plus className="w-4 h-4 mr-2" />
                     Add Category

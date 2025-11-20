@@ -58,14 +58,14 @@ export default function DeliveriesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row justify-between items-start gap-4">
         <div>
-          <h1 className="text-4xl font-heading font-bold text-foreground">Deliveries</h1>
+          <h1 className="text-3xl md:text-4xl font-heading font-bold text-foreground">Deliveries</h1>
           <p className="text-muted-foreground mt-2">
             Manage your Pickup Mtaani deliveries
           </p>
         </div>
-        <Button onClick={fetchPackages} disabled={loading} variant="outline">
+        <Button onClick={fetchPackages} disabled={loading} variant="outline" className="w-full md:w-auto">
           <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>

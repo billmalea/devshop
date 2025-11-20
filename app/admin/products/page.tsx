@@ -816,7 +816,7 @@ export default function ProductsPage() {
 
             {/* Categories */}
             <FormSection title="Categories">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <select
                   value={formData.main_category}
                   onChange={(e) => setFormData({ ...formData, main_category: e.target.value })}
@@ -845,7 +845,7 @@ export default function ProductsPage() {
 
             {/* Pricing & Stock */}
             <FormSection title="Pricing & Inventory">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Input
                   type="number"
                   step="0.01"
@@ -933,7 +933,7 @@ export default function ProductsPage() {
 
             {/* Physical Properties */}
             <FormSection title="Physical Properties" defaultOpen={false}>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input
                   type="number"
                   step="0.01"
@@ -1060,8 +1060,8 @@ export default function ProductsPage() {
           </div>
         ) : (
           /* Table View */
-          <div className="bg-background rounded-2xl border border-border overflow-hidden mt-4">
-            <table className="w-full">
+          <div className="bg-background rounded-2xl border border-border overflow-x-auto mt-4">
+            <table className="w-full min-w-[800px]">
               <thead className="bg-secondary/50 border-b border-border">
                 <tr>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Product</th>

@@ -93,12 +93,12 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col md:flex-row justify-between items-start gap-4">
         <div>
-          <h1 className="text-4xl font-heading font-bold text-foreground">Users</h1>
+          <h1 className="text-3xl md:text-4xl font-heading font-bold text-foreground">Users</h1>
           <p className="text-muted-foreground mt-2">Manage customer accounts</p>
         </div>
-        <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+        <Button className="bg-blue-600 hover:bg-blue-700 text-white w-full md:w-auto">
           <UserPlus className="h-4 w-4 mr-2" />
           Add User
         </Button>
@@ -117,8 +117,8 @@ export default function UsersPage() {
       </div>
 
       {/* Users Table */}
-      <div className="bg-background rounded-2xl border border-border overflow-hidden">
-        <table className="w-full">
+      <div className="bg-background rounded-2xl border border-border overflow-x-auto">
+        <table className="w-full min-w-[800px]">
           <thead className="bg-secondary/50 border-b border-border">
             <tr>
               <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Name</th>

@@ -108,12 +108,12 @@ export default function OrdersPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-4xl font-heading font-bold text-foreground">Orders</h1>
+        <h1 className="text-3xl md:text-4xl font-heading font-bold text-foreground">Orders</h1>
         <p className="text-muted-foreground mt-2">Manage customer orders and track deliveries</p>
       </div>
 
       {/* Filters */}
-      <div className="flex gap-4">
+      <div className="flex flex-col md:flex-row gap-4">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-3 text-muted-foreground" size={20} />
           <Input
@@ -139,8 +139,8 @@ export default function OrdersPage() {
       </div>
 
       {/* Orders Table */}
-      <div className="bg-background rounded-2xl border border-border overflow-hidden">
-        <table className="w-full">
+      <div className="bg-background rounded-2xl border border-border overflow-x-auto">
+        <table className="w-full min-w-[1000px]">
           <thead className="bg-secondary/50 border-b border-border">
             <tr>
               <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Order ID</th>

@@ -85,10 +85,10 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 md:space-y-8">
       <div>
-        <h1 className="text-4xl font-heading font-bold text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground mt-2">Overview of your store's performance</p>
+        <h1 className="text-3xl md:text-4xl font-heading font-bold text-foreground">Dashboard</h1>
+        <p className="text-sm md:text-base text-muted-foreground mt-2">Overview of your store's performance</p>
       </div>
 
       {/* Stats Grid */}

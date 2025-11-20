@@ -11,6 +11,10 @@ class AppTheme {
       onPrimary: Colors.white,
       secondary: Color(0xFFF4F4F5), // --secondary
       onSecondary: Color(0xFF18181B), // --secondary-foreground
+      tertiary: Color(0xFF3B82F6), // blue-600 accent
+      onTertiary: Colors.white,
+      tertiaryContainer: Color(0xFFDCEAFE), // blue-100
+      onTertiaryContainer: Color(0xFF1E3A8A), // blue-900
       surface: Colors.white,
       onSurface: Colors.black,
       error: Color(0xFFEF4444), // --destructive
@@ -90,6 +94,10 @@ class AppTheme {
       onPrimary: Colors.black,
       secondary: Color(0xFF27272A), // --secondary
       onSecondary: Color(0xFFFAFAFA), // --secondary-foreground
+      tertiary: Color(0xFF60A5FA), // blue-400 accent (lighter for dark mode)
+      onTertiary: Colors.black,
+      tertiaryContainer: Color(0xFF1E3A8A), // blue-900
+      onTertiaryContainer: Color(0xFFDCEAFE), // blue-100
       surface: Colors.black,
       onSurface: Colors.white,
       error: Color(0xFF7F1D1D), // --destructive

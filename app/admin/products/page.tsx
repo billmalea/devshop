@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/client'
-import { Trash2, Edit2, Search, Plus, Sparkles, Image as ImageIcon, Grid3x3, List } from 'lucide-react'
+import { Trash2, Edit2, Search, Plus, Sparkles, Image as ImageIcon, Grid3x3, List, ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
 
 interface Product {
   id: string
@@ -37,6 +38,41 @@ interface Product {
   updated_at?: string
 }
 
+// Collapsible Section Component
+const FormSection = ({
+  title,
+  children,
+  defaultOpen = true
+}: {
+  title: string,
+  children: React.ReactNode,
+  defaultOpen?: boolean
+}) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen)
+
+  return (
+    <div className="border-b border-border pb-6 last:border-0">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center justify-between w-full py-2 text-left group"
+      >
+        <h3 className="font-semibold text-foreground group-hover:text-blue-500 transition-colors">{title}</h3>
+        {isOpen ? <ChevronUp size={18} className="text-muted-foreground" /> : <ChevronDown size={18} className="text-muted-foreground" />}
+      </button>
+
+      <div className={cn(
+        "grid transition-all duration-300 ease-in-out overflow-hidden",
+        isOpen ? "grid-rows-[1fr] opacity-100 mt-4" : "grid-rows-[0fr] opacity-0"
+      )}>
+        <div className="min-h-0">
+          {children}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
@@ -50,7 +86,6 @@ export default function ProductsPage() {
   const [generatingAI, setGeneratingAI] = useState(false)
   const [showPromptInputs, setShowPromptInputs] = useState(false)
   const [descriptionPrompt, setDescriptionPrompt] = useState('')
-  const [imagePrompt, setImagePrompt] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table')
   const [formData, setFormData] = useState({
     name: '',
@@ -213,7 +248,7 @@ export default function ProductsPage() {
     setShowForm(true)
   }
 
-  const generateAIContent = async (type: 'description' | 'image') => {
+  const generateAIContent = async () => {
     if (!formData.name || !formData.brand) {
       alert('Please enter product name and brand first')
       return
@@ -221,8 +256,6 @@ export default function ProductsPage() {
 
     setGeneratingAI(true)
     try {
-      const customPrompt = type === 'description' ? descriptionPrompt : imagePrompt
-
       const response = await fetch('/api/admin/products/generate-ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -230,28 +263,20 @@ export default function ProductsPage() {
           productName: formData.name,
           brand: formData.brand,
           category: formData.sub_category || formData.category,
-          action: type === 'description' ? 'generate-description' : 'generate-image',
-          customPrompt: customPrompt || undefined,
+          action: 'generate-description',
+          customPrompt: descriptionPrompt || undefined,
         }),
       })
 
       const result = await response.json()
 
       if (result.success) {
-        if (type === 'description') {
-          setFormData({
-            ...formData,
-            short_description: result.short_description,
-            long_description: result.long_description,
-          })
-          alert('AI description generated!')
-        } else {
-          setFormData({
-            ...formData,
-            image_url: result.image_url,
-          })
-          alert('AI image generated!')
-        }
+        setFormData({
+          ...formData,
+          short_description: result.short_description,
+          long_description: result.long_description,
+        })
+        alert('AI description generated!')
       } else {
         alert(result.error || 'Failed to generate content')
       }
@@ -339,8 +364,7 @@ export default function ProductsPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
 
             {/* Basic Info */}
-            <div className="border-b border-border pb-6">
-              <h3 className="font-semibold mb-4 text-foreground">Basic Information</h3>
+            <FormSection title="Basic Information">
               <div className="grid grid-cols-2 gap-4">
                 <Input
                   type="text"
@@ -364,32 +388,29 @@ export default function ProductsPage() {
                   required
                 />
               </div>
-            </div>
+            </FormSection>
 
             {/* Descriptions with AI */}
-            <div className="border-b border-border pb-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-semibold text-foreground">Descriptions</h3>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    onClick={() => setShowPromptInputs(!showPromptInputs)}
-                    variant="outline"
-                    size="sm"
-                  >
-                    {showPromptInputs ? '🔽 Hide Prompts' : '⚙️ Custom Prompts'}
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => generateAIContent('description')}
-                    disabled={generatingAI}
-                    size="sm"
-                    className="bg-purple-600 hover:bg-purple-700 text-white"
-                  >
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    {generatingAI ? 'Generating...' : 'Generate with AI'}
-                  </Button>
-                </div>
+            <FormSection title="Descriptions">
+              <div className="flex justify-end gap-2 mb-4">
+                <Button
+                  type="button"
+                  onClick={() => setShowPromptInputs(!showPromptInputs)}
+                  variant="outline"
+                  size="sm"
+                >
+                  {showPromptInputs ? '🔽 Hide Prompts' : '⚙️ Custom Prompts'}
+                </Button>
+                <Button
+                  type="button"
+                  onClick={generateAIContent}
+                  disabled={generatingAI}
+                  size="sm"
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  {generatingAI ? 'Generating...' : 'Generate with AI'}
+                </Button>
               </div>
 
               {showPromptInputs && (
@@ -424,11 +445,10 @@ export default function ProductsPage() {
                   rows={4}
                 />
               </div>
-            </div>
+            </FormSection>
 
             {/* Categories */}
-            <div className="border-b border-border pb-6">
-              <h3 className="font-semibold mb-4 text-foreground">Categories</h3>
+            <FormSection title="Categories">
               <div className="grid grid-cols-2 gap-4">
                 <select
                   value={formData.main_category}
@@ -454,11 +474,10 @@ export default function ProductsPage() {
                   <option value="headbands">Headbands</option>
                 </select>
               </div>
-            </div>
+            </FormSection>
 
             {/* Pricing & Stock */}
-            <div className="border-b border-border pb-6">
-              <h3 className="font-semibold mb-4 text-foreground">Pricing & Inventory</h3>
+            <FormSection title="Pricing & Inventory">
               <div className="grid grid-cols-3 gap-4">
                 <Input
                   type="number"
@@ -484,11 +503,10 @@ export default function ProductsPage() {
                   max="100"
                 />
               </div>
-            </div>
+            </FormSection>
 
             {/* Product Variants */}
-            <div className="border-b border-border pb-6">
-              <h3 className="font-semibold mb-4 text-foreground">Variants (comma-separated)</h3>
+            <FormSection title="Variants">
               <div className="grid grid-cols-2 gap-4">
                 <Input
                   type="text"
@@ -510,11 +528,10 @@ export default function ProductsPage() {
                   className="col-span-2"
                 />
               </div>
-            </div>
+            </FormSection>
 
             {/* Physical Properties */}
-            <div className="border-b border-border pb-6">
-              <h3 className="font-semibold mb-4 text-foreground">Physical Properties</h3>
+            <FormSection title="Physical Properties" defaultOpen={false}>
               <div className="grid grid-cols-2 gap-4">
                 <Input
                   type="number"
@@ -530,14 +547,10 @@ export default function ProductsPage() {
                   onChange={(e) => setFormData({ ...formData, dimensions_cm: e.target.value })}
                 />
               </div>
-            </div>
+            </FormSection>
 
-            {/* Image with AI */}
-            <div className="border-b border-border pb-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-semibold text-foreground">Product Image</h3>
-              </div>
-
+            {/* Image */}
+            <FormSection title="Product Image">
               <Input
                 type="text"
                 placeholder="Image URL"
@@ -547,11 +560,10 @@ export default function ProductsPage() {
               {formData.image_url && (
                 <img src={formData.image_url} alt="Preview" className="mt-3 h-32 w-32 object-cover rounded-lg border border-border" />
               )}
-            </div>
+            </FormSection>
 
             {/* Settings */}
-            <div>
-              <h3 className="font-semibold mb-4 text-foreground">Settings</h3>
+            <FormSection title="Settings">
               <div className="flex gap-6">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -572,7 +584,7 @@ export default function ProductsPage() {
                   <span className="text-sm text-foreground">Active (visible to customers)</span>
                 </label>
               </div>
-            </div>
+            </FormSection>
 
             {/* Actions */}
             <div className="flex gap-2 pt-4">
@@ -603,117 +615,120 @@ export default function ProductsPage() {
         />
       </div>
 
-      {/* Grid View */}
-      {viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredProducts.length === 0 ? (
-            <div className="col-span-full bg-background rounded-2xl border border-border p-12 text-center">
-              <p className="text-muted-foreground">No products found</p>
-            </div>
-          ) : (
-            filteredProducts.map((product) => (
-              <div key={product.id} className="bg-background rounded-2xl border border-border overflow-hidden hover:shadow-lg transition-shadow group">
-                <div className="aspect-square relative bg-secondary/20">
-                  {product.image_url ? (
-                    <img
-                      src={product.image_url}
-                      alt={product.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <ImageIcon className="h-16 w-16 text-muted-foreground" />
-                    </div>
-                  )}
-                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      onClick={() => handleEdit(product)}
-                      size="icon"
-                      className="h-8 w-8 bg-blue-600 hover:bg-blue-700 text-white"
-                    >
-                      <Edit2 size={14} />
-                    </Button>
-                    <Button
-                      onClick={() => handleDeleteProduct(product.id)}
-                      size="icon"
-                      className="h-8 w-8 bg-red-600 hover:bg-red-700 text-white"
-                    >
-                      <Trash2 size={14} />
-                    </Button>
-                  </div>
-                </div>
-                <div className="p-4">
-                  <h3 className="font-semibold text-foreground truncate">{product.name}</h3>
-                  <p className="text-sm text-muted-foreground mt-1">{product.brand}</p>
-                  <div className="flex items-center justify-between mt-3">
-                    <span className="text-lg font-bold text-foreground">KSh {product.price.toLocaleString()}</span>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${product.stock < 5 ? 'bg-red-500/10 text-red-600' : 'bg-green-500/10 text-green-600'}`}>
-                      {product.stock} in stock
-                    </span>
-                  </div>
-                </div>
+      {/* Product List Section */}
+      <FormSection title={`Product List (${total})`} defaultOpen={true}>
+        {/* Grid View */}
+        {viewMode === 'grid' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pt-4">
+            {filteredProducts.length === 0 ? (
+              <div className="col-span-full bg-background rounded-2xl border border-border p-12 text-center">
+                <p className="text-muted-foreground">No products found</p>
               </div>
-            ))
-          )}
-        </div>
-      ) : (
-        /* Table View */
-        <div className="bg-background rounded-2xl border border-border overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-secondary/50 border-b border-border">
-              <tr>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Product</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Brand</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Category</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Price</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Stock</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredProducts.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
-                    No products found
-                  </td>
-                </tr>
-              ) : (
-                filteredProducts.map((product) => (
-                  <tr key={product.id} className="border-b border-border hover:bg-secondary/30 transition-colors">
-                    <td className="px-6 py-4 font-medium text-foreground">{product.name}</td>
-                    <td className="px-6 py-4 text-muted-foreground">{product.brand}</td>
-                    <td className="px-6 py-4 text-muted-foreground">{product.category}</td>
-                    <td className="px-6 py-4 text-foreground">KSh {product.price.toLocaleString()}</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${product.stock < 5 ? 'bg-red-500/10 text-red-600' : 'bg-green-500/10 text-green-600'}`}>
-                        {product.stock}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 flex gap-2">
+            ) : (
+              filteredProducts.map((product) => (
+                <div key={product.id} className="bg-background rounded-2xl border border-border overflow-hidden hover:shadow-lg transition-shadow group">
+                  <div className="aspect-square relative bg-secondary/20">
+                    {product.image_url ? (
+                      <img
+                        src={product.image_url}
+                        alt={product.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <ImageIcon className="h-16 w-16 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button
                         onClick={() => handleEdit(product)}
-                        variant="ghost"
                         size="icon"
-                        className="hover:bg-blue-500/10 hover:text-blue-600"
+                        className="h-8 w-8 bg-blue-600 hover:bg-blue-700 text-white"
                       >
-                        <Edit2 size={18} />
+                        <Edit2 size={14} />
                       </Button>
                       <Button
                         onClick={() => handleDeleteProduct(product.id)}
-                        variant="ghost"
                         size="icon"
-                        className="hover:bg-red-500/10 hover:text-red-600"
+                        className="h-8 w-8 bg-red-600 hover:bg-red-700 text-white"
                       >
-                        <Trash2 size={18} />
+                        <Trash2 size={14} />
                       </Button>
+                    </div>
+                  </div>
+                  <div className="p-4">
+                    <h3 className="font-semibold text-foreground truncate">{product.name}</h3>
+                    <p className="text-sm text-muted-foreground mt-1">{product.brand}</p>
+                    <div className="flex items-center justify-between mt-3">
+                      <span className="text-lg font-bold text-foreground">KSh {product.price.toLocaleString()}</span>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${product.stock < 5 ? 'bg-red-500/10 text-red-600' : 'bg-green-500/10 text-green-600'}`}>
+                        {product.stock} in stock
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        ) : (
+          /* Table View */
+          <div className="bg-background rounded-2xl border border-border overflow-hidden mt-4">
+            <table className="w-full">
+              <thead className="bg-secondary/50 border-b border-border">
+                <tr>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Product</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Brand</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Category</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Price</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Stock</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredProducts.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
+                      No products found
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+                ) : (
+                  filteredProducts.map((product) => (
+                    <tr key={product.id} className="border-b border-border hover:bg-secondary/30 transition-colors">
+                      <td className="px-6 py-4 font-medium text-foreground">{product.name}</td>
+                      <td className="px-6 py-4 text-muted-foreground">{product.brand}</td>
+                      <td className="px-6 py-4 text-muted-foreground">{product.category}</td>
+                      <td className="px-6 py-4 text-foreground">KSh {product.price.toLocaleString()}</td>
+                      <td className="px-6 py-4">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${product.stock < 5 ? 'bg-red-500/10 text-red-600' : 'bg-green-500/10 text-green-600'}`}>
+                          {product.stock}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 flex gap-2">
+                        <Button
+                          onClick={() => handleEdit(product)}
+                          variant="ghost"
+                          size="icon"
+                          className="hover:bg-blue-500/10 hover:text-blue-600"
+                        >
+                          <Edit2 size={18} />
+                        </Button>
+                        <Button
+                          onClick={() => handleDeleteProduct(product.id)}
+                          variant="ghost"
+                          size="icon"
+                          className="hover:bg-red-500/10 hover:text-red-600"
+                        >
+                          <Trash2 size={18} />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </FormSection>
 
       {/* Pagination */}
       <div className="flex items-center justify-between">

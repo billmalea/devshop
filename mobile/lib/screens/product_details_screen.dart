@@ -6,6 +6,8 @@ import 'package:mobile/providers/cart_provider.dart';
 import 'package:mobile/widgets/toast.dart';
 import 'package:mobile/screens/cart_screen.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:mobile/config.dart';
 
 class ProductDetailsScreen extends StatelessWidget {
   final Product product;
@@ -61,7 +63,18 @@ class ProductDetailsScreen extends StatelessWidget {
           ),
           IconButton(
             icon: const Icon(LucideIcons.share2),
-            onPressed: () {},
+            onPressed: () async {
+              try {
+                // Share product link
+                final productUrl = '${Config.webUrl}/products/${product.id}';
+                await Share.share(
+                  productUrl,
+                  subject: product.name,
+                );
+              } catch (e) {
+                // Ignore share errors
+              }
+            },
           ),
         ],
       ),

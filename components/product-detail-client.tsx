@@ -3,7 +3,7 @@
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ShoppingCart, Package, Truck, Shield } from 'lucide-react'
+import { ShoppingCart, Package, Truck, Shield, Share2 } from 'lucide-react'
 import { useCart } from "@/components/cart-provider"
 
 interface Product {
@@ -34,6 +34,26 @@ export function ProductDetailClient({ product }: { product: Product }) {
       image_url: product.image_url,
       brand: product.brand
     })
+  }
+
+  const handleShare = async () => {
+    const shareData = {
+      title: product.name,
+      text: `Check out ${product.name} on DevShop`,
+      url: window.location.href
+    }
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData)
+      } else {
+        // Fallback: copy to clipboard
+        await navigator.clipboard.writeText(window.location.href)
+        alert('Link copied to clipboard!')
+      }
+    } catch (err) {
+      // User cancelled or error occurred
+    }
   }
 
   return (
@@ -88,7 +108,7 @@ export function ProductDetailClient({ product }: { product: Product }) {
             </span>
           </div>
 
-          <div className="pt-4">
+          <div className="pt-4 space-y-3">
             <Button
               size="lg"
               className="w-full h-14 text-lg bg-foreground text-background hover:bg-foreground/90 font-bold rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
@@ -97,6 +117,15 @@ export function ProductDetailClient({ product }: { product: Product }) {
             >
               <ShoppingCart className="mr-2 h-5 w-5" />
               Add to Cart
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="w-full h-12 text-base rounded-full border-2"
+              onClick={handleShare}
+            >
+              <Share2 className="mr-2 h-4 w-4" />
+              Share Product
             </Button>
           </div>
 

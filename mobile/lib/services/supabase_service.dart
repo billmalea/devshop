@@ -45,6 +45,14 @@ class SupabaseService {
     return Product.fromJson(response);
   }
 
+  Future<Product?> getProductById(String id) async {
+    try {
+      return await getProduct(id);
+    } catch (e) {
+      return null;
+    }
+  }
+
   Future<List<Category>> getCategories() async {
     try {
       final response = await _supabase

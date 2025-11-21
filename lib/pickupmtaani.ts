@@ -96,13 +96,27 @@ class PickupMtaaniAPI {
       ...options.headers,
     }
 
+    console.log('[Pickup Mtaani] Request:', {
+      url,
+      method: options.method || 'GET',
+      hasApiKey: !!this.apiKey,
+      apiKeyPrefix: this.apiKey?.substring(0, 10) + '...'
+    })
+
     const response = await fetch(url, {
       ...options,
       headers,
     })
 
+    console.log('[Pickup Mtaani] Response:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok
+    })
+
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: response.statusText }))
+      console.error('[Pickup Mtaani] Error:', error)
       throw new Error(`Pickup Mtaani API Error: ${error.message || response.statusText}`)
     }
 

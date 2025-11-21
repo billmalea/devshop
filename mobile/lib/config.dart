@@ -44,6 +44,7 @@ class Config {
   // App Configuration
   static const String appName = 'DevShop';
   static const String appVersion = '1.0.0';
+  static String get webUrl => dotenv.env['WEB_URL'] ?? 'https://devshop.com';
 
   // Feature Flags
   static bool get enableAnalytics =>

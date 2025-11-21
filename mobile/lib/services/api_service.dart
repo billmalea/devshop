@@ -80,6 +80,23 @@ class ApiService {
     }
   }
 
+  Future<List<Map<String, dynamic>>> getDeliveryPackages() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/pickup-mtaani/packages'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return List<Map<String, dynamic>>.from(data['data'] ?? []);
+      } else {
+        throw Exception('Failed to load packages: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching delivery packages: $e');
+    }
+  }
+
   // Payment Integration (supports both TinyPesa and M-Pesa)
   Future<Map<String, dynamic>> initiateStkPush({
     required String phoneNumber,

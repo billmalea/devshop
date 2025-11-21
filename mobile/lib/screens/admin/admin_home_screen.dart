@@ -3,6 +3,9 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:mobile/screens/admin/admin_products_screen.dart';
 import 'package:mobile/screens/admin/admin_orders_screen.dart';
 import 'package:mobile/screens/admin/admin_content_screen.dart';
+import 'package:mobile/screens/admin/admin_categories_screen.dart';
+import 'package:mobile/screens/admin/admin_deliveries_screen.dart';
+import 'package:mobile/screens/admin/admin_inventory_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AdminHomeScreen extends StatefulWidget {
@@ -193,6 +196,48 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                         context,
                         MaterialPageRoute(
                           builder: (context) => const AdminContentScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _AdminMenuItem(
+                    title: 'Categories',
+                    subtitle: 'Manage product categories',
+                    icon: LucideIcons.folderTree,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AdminCategoriesScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _AdminMenuItem(
+                    title: 'Inventory',
+                    subtitle: 'Track and manage stock levels',
+                    icon: LucideIcons.warehouse,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AdminInventoryScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _AdminMenuItem(
+                    title: 'Deliveries',
+                    subtitle: 'View Pickup Mtaani deliveries',
+                    icon: LucideIcons.truck,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AdminDeliveriesScreen(),
                         ),
                       );
                     },

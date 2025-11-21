@@ -15,11 +15,13 @@ class CategoriesScreen extends StatefulWidget {
 class _CategoriesScreenState extends State<CategoriesScreen>
     with SingleTickerProviderStateMixin {
   final SupabaseService _supabaseService = SupabaseService();
-  List<Category> _categories = [];
+  List<Category> _allCategories = [];
+  List<Category> _parentCategories = [];
   List<Product> _products = [];
   bool _isLoading = true;
   late TabController _tabController;
   int _currentTabIndex = 0;
+  String? _selectedSubcategorySlug;
 
   @override
   void initState() {
@@ -29,15 +31,17 @@ class _CategoriesScreenState extends State<CategoriesScreen>
 
   Future<void> _loadCategories() async {
     try {
-      final categories = await _supabaseService.getCategories();
+      final categories = await _supabaseService.getAllCategories();
       if (mounted && categories.isNotEmpty) {
+        final parentCats = categories.where((c) => c.parentId == null).toList();
         setState(() {
-          _categories = categories;
+          _allCategories = categories;
+          _parentCategories = parentCats;
           _tabController =
-              TabController(length: categories.length, vsync: this);
+              TabController(length: parentCats.length, vsync: this);
           _tabController.addListener(_onTabChanged);
         });
-        await _loadProductsByCategory(categories[0]);
+        await _loadProductsByCategory(parentCats[0]);
       }
     } catch (e) {
       debugPrint('Error loading categories: $e');
@@ -51,20 +55,28 @@ class _CategoriesScreenState extends State<CategoriesScreen>
 
   void _onTabChanged() {
     if (_tabController.indexIsChanging) {
-      _loadProductsByCategory(_categories[_tabController.index]);
+      setState(() {
+        _selectedSubcategorySlug = null; // Reset subcategory selection
+      });
+      _loadProductsByCategory(_parentCategories[_tabController.index]);
     }
   }
 
-  Future<void> _loadProductsByCategory(Category category) async {
+  List<Category> _getSubcategories(String parentId) {
+    return _allCategories.where((c) => c.parentId == parentId).toList();
+  }
+
+  Future<void> _loadProductsByCategory(Category category,
+      {String? subcategorySlug}) async {
     setState(() {
       _isLoading = true;
-      _currentTabIndex = _categories.indexOf(category);
+      _currentTabIndex = _parentCategories.indexOf(category);
     });
 
     try {
-      // Use slug for querying products as per web app convention
-      final products =
-          await _supabaseService.getProductsByCategory(category.slug);
+      // Use subcategory slug if provided, otherwise use parent category slug
+      final slug = subcategorySlug ?? category.slug;
+      final products = await _supabaseService.getProductsByCategory(slug);
       if (mounted) {
         setState(() {
           _products = products;
@@ -81,11 +93,25 @@ class _CategoriesScreenState extends State<CategoriesScreen>
     }
   }
 
+  void _onSubcategorySelected(String? subcategorySlug) {
+    setState(() {
+      _selectedSubcategorySlug = subcategorySlug;
+    });
+    _loadProductsByCategory(
+      _parentCategories[_currentTabIndex],
+      subcategorySlug: subcategorySlug,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (_categories.isEmpty) {
+    if (_parentCategories.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
+
+    final currentCategory = _parentCategories[_currentTabIndex];
+    final subcategories = _getSubcategories(currentCategory.id);
+    final hasSubcategories = subcategories.isNotEmpty;
 
     return SafeArea(
       child: Column(
@@ -100,6 +126,7 @@ class _CategoriesScreenState extends State<CategoriesScreen>
                   ),
             ),
           ),
+          // Main Category Tabs
           Container(
             decoration: BoxDecoration(
               color: Theme.of(context).scaffoldBackgroundColor,
@@ -133,7 +160,7 @@ class _CategoriesScreenState extends State<CategoriesScreen>
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 labelPadding: const EdgeInsets.symmetric(horizontal: 4),
                 tabAlignment: TabAlignment.start,
-                tabs: _categories
+                tabs: _parentCategories
                     .map((category) => Tab(
                           height: 32,
                           child: Container(
@@ -157,6 +184,72 @@ class _CategoriesScreenState extends State<CategoriesScreen>
               ),
             ),
           ),
+          // Subcategory Chips (shown only if current category has subcategories)
+          if (hasSubcategories)
+            Container(
+              height: 40,
+              margin: const EdgeInsets.only(top: 8, bottom: 8),
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: [
+                  // "All" chip
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: const Text('All'),
+                      selected: _selectedSubcategorySlug == null,
+                      onSelected: (selected) {
+                        if (selected) _onSubcategorySelected(null);
+                      },
+                      selectedColor: Theme.of(context).colorScheme.tertiary,
+                      labelStyle: TextStyle(
+                        color: _selectedSubcategorySlug == null
+                            ? Theme.of(context).colorScheme.onPrimary
+                            : Theme.of(context).colorScheme.onSurface,
+                        fontWeight: _selectedSubcategorySlug == null
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                        fontSize: 12,
+                      ),
+                      side: BorderSide(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .outline
+                            .withOpacity(0.2),
+                      ),
+                    ),
+                  ),
+                  // Subcategory chips
+                  ...subcategories.map((subcat) => Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(subcat.name),
+                          selected: _selectedSubcategorySlug == subcat.slug,
+                          onSelected: (selected) {
+                            if (selected) _onSubcategorySelected(subcat.slug);
+                          },
+                          selectedColor: Theme.of(context).colorScheme.tertiary,
+                          labelStyle: TextStyle(
+                            color: _selectedSubcategorySlug == subcat.slug
+                                ? Theme.of(context).colorScheme.onPrimary
+                                : Theme.of(context).colorScheme.onSurface,
+                            fontWeight: _selectedSubcategorySlug == subcat.slug
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            fontSize: 12,
+                          ),
+                          side: BorderSide(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .outline
+                                .withOpacity(0.2),
+                          ),
+                        ),
+                      )),
+                ],
+              ),
+            ),
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -180,7 +273,9 @@ class _CategoriesScreenState extends State<CategoriesScreen>
                       )
                     : RefreshIndicator(
                         onRefresh: () => _loadProductsByCategory(
-                            _categories[_currentTabIndex]),
+                          _parentCategories[_currentTabIndex],
+                          subcategorySlug: _selectedSubcategorySlug,
+                        ),
                         child: GridView.builder(
                           padding: const EdgeInsets.all(16),
                           gridDelegate:

@@ -69,6 +69,30 @@ class SupabaseService {
     }
   }
 
+  Future<List<Category>> getAllCategories() async {
+    try {
+      final response =
+          await _supabase.from('categories').select().order('name');
+
+      return (response as List).map((e) => Category.fromJson(e)).toList();
+    } catch (e) {
+      throw Exception('Failed to load all categories: $e');
+    }
+  }
+
+  // Admin Category Management
+  Future<void> createCategory(Map<String, dynamic> data) async {
+    await _supabase.from('categories').insert(data);
+  }
+
+  Future<void> updateCategory(String id, Map<String, dynamic> data) async {
+    await _supabase.from('categories').update(data).eq('id', id);
+  }
+
+  Future<void> deleteCategory(String id) async {
+    await _supabase.from('categories').delete().eq('id', id);
+  }
+
   Future<List<NewArrival>> getNewArrivals() async {
     try {
       final response = await _supabase

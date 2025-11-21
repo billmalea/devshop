@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mobile/models/product.dart';
 import 'package:mobile/models/category.dart';
 import 'package:mobile/models/new_arrival.dart';
+import 'package:mobile/models/order.dart';
 
 class SupabaseService {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -162,5 +164,87 @@ class SupabaseService {
     } catch (e) {
       throw Exception('Failed to clear cart: $e');
     }
+  }
+
+  // Admin Product Management
+  Future<List<Product>> getAllProducts() async {
+    final response = await _supabase
+        .from('products')
+        .select()
+        .order('created_at', ascending: false);
+
+    return (response as List).map((e) => Product.fromJson(e)).toList();
+  }
+
+  Future<void> createProduct(Map<String, dynamic> productData) async {
+    await _supabase.from('products').insert(productData);
+  }
+
+  Future<void> updateProduct(
+      String id, Map<String, dynamic> productData) async {
+    await _supabase.from('products').update(productData).eq('id', id);
+  }
+
+  Future<void> deleteProduct(String id) async {
+    await _supabase.from('products').delete().eq('id', id);
+  }
+
+  Future<String> uploadProductImage(File imageFile) async {
+    final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final path = 'products/$fileName';
+
+    await _supabase.storage.from('product-images').upload(path, imageFile);
+
+    final imageUrl =
+        _supabase.storage.from('product-images').getPublicUrl(path);
+    return imageUrl;
+  }
+
+  // Admin Order Management
+  Future<List<Order>> getAllOrders() async {
+    try {
+      final response = await _supabase
+          .from('orders')
+          .select('*, items:order_items(*)')
+          .order('created_at', ascending: false);
+
+      return (response as List).map((e) => Order.fromJson(e)).toList();
+    } catch (e) {
+      throw Exception('Failed to load all orders: $e');
+    }
+  }
+
+  Future<void> updateOrderStatus(String orderId, String status) async {
+    await _supabase.from('orders').update({'status': status}).eq('id', orderId);
+  }
+
+  // Admin New Arrival Management
+  Future<List<NewArrival>> getAllNewArrivals() async {
+    try {
+      final response =
+          await _supabase.from('new_arrivals').select().order('display_order');
+      return (response as List).map((e) => NewArrival.fromJson(e)).toList();
+    } catch (e) {
+      throw Exception('Failed to load all new arrivals: $e');
+    }
+  }
+
+  Future<void> createNewArrival(Map<String, dynamic> data) async {
+    await _supabase.from('new_arrivals').insert(data);
+  }
+
+  Future<void> updateNewArrival(String id, Map<String, dynamic> data) async {
+    await _supabase.from('new_arrivals').update(data).eq('id', id);
+  }
+
+  Future<void> deleteNewArrival(String id) async {
+    await _supabase.from('new_arrivals').delete().eq('id', id);
+  }
+
+  Future<String> uploadNewArrivalImage(File imageFile) async {
+    final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final path = 'new-arrivals/$fileName';
+    await _supabase.storage.from('product-images').upload(path, imageFile);
+    return _supabase.storage.from('product-images').getPublicUrl(path);
   }
 }

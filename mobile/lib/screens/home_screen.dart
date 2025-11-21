@@ -10,6 +10,8 @@ import 'package:mobile/screens/categories_screen.dart';
 import 'package:mobile/screens/profile_screen.dart';
 import 'package:mobile/providers/theme_provider.dart';
 import 'package:mobile/services/supabase_service.dart';
+import 'package:mobile/services/admin_service.dart';
+import 'package:mobile/screens/admin/admin_home_screen.dart';
 import 'package:mobile/widgets/product_card.dart';
 import 'package:provider/provider.dart';
 
@@ -73,9 +75,11 @@ class HomeContent extends StatefulWidget {
 
 class _HomeContentState extends State<HomeContent> {
   final SupabaseService _supabaseService = SupabaseService();
+  final AdminService _adminService = AdminService();
   List<Product> _featuredProducts = [];
   List<NewArrival> _newArrivals = [];
   bool _isLoading = true;
+  bool _isAdmin = false;
   late PageController _pageController;
   int _currentPage = 0;
   Timer? _timer;
@@ -85,7 +89,17 @@ class _HomeContentState extends State<HomeContent> {
     super.initState();
     _pageController = PageController();
     _loadData();
+    _checkAdminStatus();
     _startAutoSlide();
+  }
+
+  Future<void> _checkAdminStatus() async {
+    final isAdmin = await _adminService.isAdmin();
+    if (mounted) {
+      setState(() {
+        _isAdmin = isAdmin;
+      });
+    }
   }
 
   @override
@@ -160,6 +174,19 @@ class _HomeContentState extends State<HomeContent> {
           ],
         ),
         actions: [
+          if (_isAdmin)
+            IconButton(
+              icon: const Icon(LucideIcons.shield),
+              tooltip: 'Admin Panel',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AdminHomeScreen(),
+                  ),
+                );
+              },
+            ),
           IconButton(
             icon: Icon(
               Theme.of(context).brightness == Brightness.dark

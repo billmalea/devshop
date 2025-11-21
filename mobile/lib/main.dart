@@ -10,7 +10,7 @@ import 'package:mobile/services/supabase_service.dart';
 import 'package:mobile/theme.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:uni_links/uni_links.dart';
+import 'package:app_links/app_links.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,6 +44,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+  late AppLinks _appLinks;
   StreamSubscription? _linkSubscription;
 
   @override
@@ -59,9 +60,11 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> _initDeepLinks() async {
+    _appLinks = AppLinks();
+
     // Handle initial link if app was opened from a link
     try {
-      final initialLink = await getInitialUri();
+      final initialLink = await _appLinks.getInitialLink();
       if (initialLink != null) {
         _handleDeepLink(initialLink);
       }
@@ -70,7 +73,7 @@ class _MyAppState extends State<MyApp> {
     }
 
     // Listen for links while app is running
-    _linkSubscription = uriLinkStream.listen((Uri? uri) {
+    _linkSubscription = _appLinks.uriLinkStream.listen((Uri? uri) {
       if (uri != null) {
         _handleDeepLink(uri);
       }
@@ -80,8 +83,10 @@ class _MyAppState extends State<MyApp> {
   void _handleDeepLink(Uri uri) {
     // Handle product links: devshop://products/{id} or https://devshop.com/products/{id}
     final pathSegments = uri.pathSegments;
-    
-    if (pathSegments.isNotEmpty && pathSegments[0] == 'products' && pathSegments.length > 1) {
+
+    if (pathSegments.isNotEmpty &&
+        pathSegments[0] == 'products' &&
+        pathSegments.length > 1) {
       final productId = pathSegments[1];
       _navigateToProduct(productId);
     }
@@ -91,7 +96,7 @@ class _MyAppState extends State<MyApp> {
     try {
       final supabaseService = SupabaseService();
       final product = await supabaseService.getProductById(productId);
-      
+
       if (product != null) {
         navigatorKey.currentState?.push(
           MaterialPageRoute(

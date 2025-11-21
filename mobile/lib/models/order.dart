@@ -3,9 +3,11 @@ class Order {
   final String userId;
   final double totalAmount;
   final String status;
-  final String? deliveryAddress;
+  final String? shippingAddress;
   final String? phoneNumber;
   final String? pickupLocation;
+  final String? paymentMethod;
+  final String? shippingMethod;
   final DateTime createdAt;
   final DateTime? updatedAt;
   final List<OrderItem>? items;
@@ -15,9 +17,11 @@ class Order {
     required this.userId,
     required this.totalAmount,
     required this.status,
-    this.deliveryAddress,
+    this.shippingAddress,
     this.phoneNumber,
     this.pickupLocation,
+    this.paymentMethod,
+    this.shippingMethod,
     required this.createdAt,
     this.updatedAt,
     this.items,
@@ -29,9 +33,11 @@ class Order {
       userId: json['user_id'] as String,
       totalAmount: (json['total_amount'] as num).toDouble(),
       status: json['status'] as String,
-      deliveryAddress: json['delivery_address'] as String?,
+      shippingAddress: json['shipping_address'] as String?,
       phoneNumber: json['phone_number'] as String?,
       pickupLocation: json['pickup_location'] as String?,
+      paymentMethod: json['payment_method'] as String?,
+      shippingMethod: json['shipping_method'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'] as String)
@@ -50,9 +56,11 @@ class Order {
       'user_id': userId,
       'total_amount': totalAmount,
       'status': status,
-      'delivery_address': deliveryAddress,
+      'shipping_address': shippingAddress,
       'phone_number': phoneNumber,
       'pickup_location': pickupLocation,
+      'payment_method': paymentMethod,
+      'shipping_method': shippingMethod,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };

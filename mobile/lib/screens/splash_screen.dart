@@ -181,14 +181,23 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Color _getColorForIndex(int index, bool isDark) {
-    final colors = [
-      Colors.blue,
-      Colors.purple,
-      Colors.amber,
-      Colors.cyan,
-      Colors.green,
-      Colors.pink,
+    final lightColors = [
+      Colors.blue.shade700,
+      Colors.purple.shade700,
+      Colors.amber.shade700,
+      Colors.cyan.shade700,
+      Colors.green.shade700,
+      Colors.pink.shade700,
     ];
+    final darkColors = [
+      Colors.blue.shade300,
+      Colors.purple.shade300,
+      Colors.amber.shade300,
+      Colors.cyan.shade300,
+      Colors.green.shade300,
+      Colors.pink.shade300,
+    ];
+    final colors = isDark ? darkColors : lightColors;
     return colors[index % colors.length];
   }
 }

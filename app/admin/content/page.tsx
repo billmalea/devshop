@@ -1,19 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/client'
-import { Save } from 'lucide-react'
+import { Upload, Trash2, Image as ImageIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-
-interface ContentRow {
-  section: string
-  title?: string
-  description?: string
-  image_url?: string
-  button_text?: string
-  button_link?: string
-}
+import Image from 'next/image'
 
 interface NewArrival {
   id: string
@@ -26,64 +18,14 @@ interface NewArrival {
 }
 
 export default function ContentPage() {
-  const [content, setContent] = useState({
-    hero_banner: {
-      title: '',
-      description: '',
-      image_url: '',
-      button_text: '',
-      button_link: '',
-    },
-    about_us: {
-      description: '',
-    },
-    faqs: [],
-  })
   const [newArrivals, setNewArrivals] = useState<NewArrival[]>([])
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState<number | null>(null)
+  const fileInputRefs = useRef<(HTMLInputElement | null)[]>([])
 
   useEffect(() => {
-    fetchContent()
     fetchNewArrivals()
   }, [])
-
-  const fetchContent = async () => {
-    try {
-      const supabase = createClient()
-      const { data, error } = await supabase
-        .from('content')
-        .select('*')
-
-      if (error) throw error
-
-      const parsedContent = {
-        hero_banner: { title: '', description: '', image_url: '', button_text: '', button_link: '' },
-        about_us: { description: '' },
-        faqs: [],
-      }
-      data?.forEach((item: ContentRow) => {
-        if (item.section === 'hero_banner') {
-          parsedContent.hero_banner = {
-            title: item.title ?? '',
-            description: item.description ?? '',
-            image_url: item.image_url ?? '',
-            button_text: item.button_text ?? '',
-            button_link: item.button_link ?? '',
-          }
-        }
-        if (item.section === 'about_us') {
-          parsedContent.about_us = { description: item.description ?? '' }
-        }
-      })
-
-      setContent(parsedContent)
-    } catch (error) {
-      console.error('Failed to fetch content:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const fetchNewArrivals = async () => {
     try {
@@ -94,77 +36,172 @@ export default function ContentPage() {
         .order('display_order')
 
       if (error) throw error
-      setNewArrivals(data || [])
+
+      // Ensure we always have 3 slots
+      const arrivals = [...(data || [])]
+      while (arrivals.length < 3) {
+        arrivals.push({
+          id: '',
+          image_url: '',
+          display_order: arrivals.length,
+          is_active: true
+        })
+      }
+      setNewArrivals(arrivals.slice(0, 3))
     } catch (error) {
       console.error('Failed to fetch new arrivals:', error)
-    }
-  }
-
-  const handleSaveContent = async () => {
-    setSaving(true)
-    try {
-      const supabase = createClient()
-
-      await supabase
-        .from('content')
-        .upsert([
-          {
-            section: 'hero_banner',
-            title: content.hero_banner.title,
-            description: content.hero_banner.description,
-            image_url: content.hero_banner.image_url,
-            button_text: content.hero_banner.button_text,
-            button_link: content.hero_banner.button_link,
-          }
-        ], { onConflict: 'section' })
-
-      await supabase
-        .from('content')
-        .upsert([
-          {
-            section: 'about_us',
-            description: content.about_us.description,
-          }
-        ], { onConflict: 'section' })
-
-      alert('Content saved successfully!')
-    } catch (error) {
-      console.error('Failed to save content:', error)
-      alert('Failed to save content')
     } finally {
-      setSaving(false)
+      setLoading(false)
     }
   }
 
-  const handleSaveNewArrival = async (arrival: Partial<NewArrival>) => {
+  const handleFileUpload = async (index: number, file: File) => {
+    if (!file) return
+
+    setUploading(index)
     try {
       const supabase = createClient()
-      if (arrival.id) {
-        await supabase
-          .from('new_arrivals')
-          .update(arrival)
-          .eq('id', arrival.id)
-      } else {
-        await supabase
-          .from('new_arrivals')
-          .insert([arrival])
+
+      // Generate unique filename
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+      const filePath = `${fileName}`
+
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('new-arrivals')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        })
+
+      if (uploadError) throw uploadError
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('new-arrivals')
+        .getPublicUrl(filePath)
+
+      // Update state with new image URL
+      const updated = [...newArrivals]
+      updated[index] = {
+        ...updated[index],
+        image_url: publicUrl
       }
-      await fetchNewArrivals()
-    } catch (error) {
-      console.error('Failed to save new arrival:', error)
-      alert('Failed to save')
+      setNewArrivals(updated)
+
+      alert('Image uploaded successfully!')
+    } catch (error: any) {
+      console.error('Upload error:', error)
+      alert(`Failed to upload image: ${error.message}`)
+    } finally {
+      setUploading(null)
     }
   }
 
-  const handleDeleteNewArrival = async (id: string) => {
-    if (!confirm('Delete this item?')) return
+  const handleSave = async (index: number) => {
+    const arrival = newArrivals[index]
+
+    if (!arrival.image_url) {
+      alert('Please upload an image first')
+      return
+    }
+
     try {
       const supabase = createClient()
-      await supabase.from('new_arrivals').delete().eq('id', id)
+
+      const dataToSave = {
+        image_url: arrival.image_url,
+        title: arrival.title || null,
+        description: arrival.description || null,
+        link_url: arrival.link_url || null,
+        display_order: index,
+        is_active: true
+      }
+
+      if (arrival.id) {
+        // Update existing
+        const { error } = await supabase
+          .from('new_arrivals')
+          .update(dataToSave)
+          .eq('id', arrival.id)
+
+        if (error) throw error
+      } else {
+        // Insert new
+        const { data, error } = await supabase
+          .from('new_arrivals')
+          .insert([dataToSave])
+          .select()
+          .single()
+
+        if (error) throw error
+
+        // Update local state with new ID
+        const updated = [...newArrivals]
+        updated[index] = { ...updated[index], id: data.id }
+        setNewArrivals(updated)
+      }
+
+      alert('Saved successfully!')
       await fetchNewArrivals()
-    } catch (error) {
-      console.error('Failed to delete:', error)
+    } catch (error: any) {
+      console.error('Save error:', error)
+      alert(`Failed to save: ${error.message}`)
     }
+  }
+
+  const handleDelete = async (index: number) => {
+    const arrival = newArrivals[index]
+
+    if (!arrival.id) {
+      // Just clear the local state
+      const updated = [...newArrivals]
+      updated[index] = {
+        id: '',
+        image_url: '',
+        display_order: index,
+        is_active: true
+      }
+      setNewArrivals(updated)
+      return
+    }
+
+    if (!confirm('Are you sure you want to delete this item?')) return
+
+    try {
+      const supabase = createClient()
+
+      // Delete from database
+      const { error } = await supabase
+        .from('new_arrivals')
+        .delete()
+        .eq('id', arrival.id)
+
+      if (error) throw error
+
+      // Delete image from storage if exists
+      if (arrival.image_url) {
+        const fileName = arrival.image_url.split('/').pop()
+        if (fileName) {
+          await supabase.storage
+            .from('new-arrivals')
+            .remove([fileName])
+        }
+      }
+
+      alert('Deleted successfully!')
+      await fetchNewArrivals()
+    } catch (error: any) {
+      console.error('Delete error:', error)
+      alert(`Failed to delete: ${error.message}`)
+    }
+  }
+
+  const updateField = (index: number, field: keyof NewArrival, value: any) => {
+    const updated = [...newArrivals]
+    updated[index] = { ...updated[index], [field]: value }
+    setNewArrivals(updated)
   }
 
   if (loading) {
@@ -174,7 +211,7 @@ export default function ContentPage() {
         <div className="bg-background rounded-2xl border border-border p-6">
           <div className="space-y-4">
             {[1, 2, 3].map(i => (
-              <div key={i} className="h-16 bg-secondary rounded-lg animate-pulse" />
+              <div key={i} className="h-32 bg-secondary rounded-lg animate-pulse" />
             ))}
           </div>
         </div>
@@ -184,204 +221,120 @@ export default function ContentPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-4xl font-heading font-bold text-foreground">Content</h1>
-          <p className="text-muted-foreground mt-2">Manage website content and banners</p>
-        </div>
-        <Button
-          onClick={handleSaveContent}
-          disabled={saving}
-          className="bg-blue-600 hover:bg-blue-700 text-white"
-        >
-          <Save className="h-4 w-4 mr-2" />
-          {saving ? 'Saving...' : 'Save Changes'}
-        </Button>
-      </div>
-
-      {/* Hero Banner Section */}
-      <div className="bg-background rounded-2xl border border-border p-6">
-        <h2 className="text-2xl font-heading font-bold text-foreground mb-6">Hero Banner</h2>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-2 text-foreground">Title</label>
-            <Input
-              type="text"
-              value={content.hero_banner.title}
-              onChange={(e) => setContent({
-                ...content,
-                hero_banner: { ...content.hero_banner, title: e.target.value }
-              })}
-              placeholder="Hero title"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2 text-foreground">Description</label>
-            <textarea
-              value={content.hero_banner.description}
-              onChange={(e) => setContent({
-                ...content,
-                hero_banner: { ...content.hero_banner, description: e.target.value }
-              })}
-              rows={4}
-              className="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-blue-600"
-              placeholder="Hero description"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2 text-foreground">Image URL</label>
-            <Input
-              type="text"
-              value={content.hero_banner.image_url}
-              onChange={(e) => setContent({
-                ...content,
-                hero_banner: { ...content.hero_banner, image_url: e.target.value }
-              })}
-              placeholder="https://..."
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2 text-foreground">Button Text</label>
-              <Input
-                type="text"
-                value={content.hero_banner.button_text}
-                onChange={(e) => setContent({
-                  ...content,
-                  hero_banner: { ...content.hero_banner, button_text: e.target.value }
-                })}
-                placeholder="Shop Now"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2 text-foreground">Button Link</label>
-              <Input
-                type="text"
-                value={content.hero_banner.button_link}
-                onChange={(e) => setContent({
-                  ...content,
-                  hero_banner: { ...content.hero_banner, button_link: e.target.value }
-                })}
-                placeholder="/products"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* About Us Section */}
-      <div className="bg-background rounded-2xl border border-border p-6">
-        <h2 className="text-2xl font-heading font-bold text-foreground mb-6">About Us</h2>
-        <div>
-          <label className="block text-sm font-medium mb-2 text-foreground">Description</label>
-          <textarea
-            value={content.about_us.description}
-            onChange={(e) => setContent({
-              ...content,
-              about_us: { description: e.target.value }
-            })}
-            rows={6}
-            className="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-blue-600"
-            placeholder="About us content..."
-          />
-        </div>
+      <div>
+        <h1 className="text-4xl font-heading font-bold text-foreground">Content Management</h1>
+        <p className="text-muted-foreground mt-2">Manage hero images for web and mobile</p>
       </div>
 
       {/* New Arrivals Section */}
       <div className="bg-background rounded-2xl border border-border p-6">
-        <h2 className="text-2xl font-heading font-bold text-foreground mb-6">New Arrivals / Hero Images</h2>
-        <p className="text-sm text-muted-foreground mb-4">Manage up to 3 images for the hero section (web) and new arrivals slider (mobile)</p>
-        <div className="space-y-4">
-          {[0, 1, 2].map((index) => {
-            const arrival = newArrivals[index]
-            return (
-              <div key={index} className="border border-border rounded-lg p-4">
-                <div className="flex items-start gap-4">
-                  <div className="flex-1 space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium mb-2 text-foreground">Image URL</label>
-                      <Input
-                        type="text"
-                        value={arrival?.image_url || ''}
-                        onChange={(e) => {
-                          const updated = [...newArrivals]
-                          if (arrival) {
-                            updated[index] = { ...arrival, image_url: e.target.value }
-                          } else {
-                            updated[index] = {
-                              id: '',
-                              image_url: e.target.value,
-                              display_order: index,
-                              is_active: true
-                            }
-                          }
-                          setNewArrivals(updated)
-                        }}
-                        placeholder="https://..."
+        <h2 className="text-2xl font-heading font-bold text-foreground mb-2">New Arrivals / Hero Images</h2>
+        <p className="text-sm text-muted-foreground mb-6">
+          Upload up to 3 images for the hero section (web) and new arrivals slider (mobile)
+        </p>
+
+        <div className="space-y-6">
+          {newArrivals.map((arrival, index) => (
+            <div key={index} className="border border-border rounded-lg p-6">
+              <div className="flex items-start gap-6">
+                {/* Image Preview/Upload */}
+                <div className="flex-shrink-0">
+                  <div className="w-48 h-64 border-2 border-dashed border-border rounded-lg overflow-hidden bg-secondary/20 relative">
+                    {arrival.image_url ? (
+                      <Image
+                        src={arrival.image_url}
+                        alt={arrival.title || `Slot ${index + 1}`}
+                        fill
+                        className="object-cover"
                       />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-sm font-medium mb-2 text-foreground">Title (Optional)</label>
-                        <Input
-                          type="text"
-                          value={arrival?.title || ''}
-                          onChange={(e) => {
-                            const updated = [...newArrivals]
-                            if (updated[index]) {
-                              updated[index] = { ...updated[index], title: e.target.value }
-                              setNewArrivals(updated)
-                            }
-                          }}
-                          placeholder="New Collection"
-                        />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <ImageIcon className="h-12 w-12 text-muted-foreground/30" />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2 text-foreground">Link URL (Optional)</label>
-                        <Input
-                          type="text"
-                          value={arrival?.link_url || ''}
-                          onChange={(e) => {
-                            const updated = [...newArrivals]
-                            if (updated[index]) {
-                              updated[index] = { ...updated[index], link_url: e.target.value }
-                              setNewArrivals(updated)
-                            }
-                          }}
-                          placeholder="/products"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2 text-foreground">Description (Optional)</label>
-                      <Input
-                        type="text"
-                        value={arrival?.description || ''}
-                        onChange={(e) => {
-                          const updated = [...newArrivals]
-                          if (updated[index]) {
-                            updated[index] = { ...updated[index], description: e.target.value }
-                            setNewArrivals(updated)
-                          }
-                        }}
-                        placeholder="Check out our latest products"
-                      />
-                    </div>
+                    )}
                   </div>
-                  {arrival && (
+                  <input
+                    ref={el => { fileInputRefs.current[index] = el }}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) handleFileUpload(index, file)
+                    }}
+                  />
+                  <Button
+                    onClick={() => fileInputRefs.current[index]?.click()}
+                    disabled={uploading === index}
+                    className="w-full mt-2"
+                    variant="outline"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    {uploading === index ? 'Uploading...' : arrival.image_url ? 'Replace' : 'Upload'}
+                  </Button>
+                </div>
+
+                {/* Form Fields */}
+                <div className="flex-1 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-foreground">
+                      Title (Optional)
+                    </label>
+                    <Input
+                      type="text"
+                      value={arrival.title || ''}
+                      onChange={(e) => updateField(index, 'title', e.target.value)}
+                      placeholder="New Collection"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-foreground">
+                      Description (Optional)
+                    </label>
+                    <Input
+                      type="text"
+                      value={arrival.description || ''}
+                      onChange={(e) => updateField(index, 'description', e.target.value)}
+                      placeholder="Check out our latest products"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-foreground">
+                      Link URL (Optional)
+                    </label>
+                    <Input
+                      type="text"
+                      value={arrival.link_url || ''}
+                      onChange={(e) => updateField(index, 'link_url', e.target.value)}
+                      placeholder="/products"
+                    />
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
                     <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleSaveNewArrival(arrival)}
-                      className="mt-6"
+                      onClick={() => handleSave(index)}
+                      disabled={!arrival.image_url}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
                     >
                       Save
                     </Button>
-                  )}
+                    {(arrival.id || arrival.image_url) && (
+                      <Button
+                        onClick={() => handleDelete(index)}
+                        variant="outline"
+                        className="text-red-600 border-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
-            )
-          })}
+            </div>
+          ))}
         </div>
       </div>
     </div>

@@ -91,7 +91,7 @@ class PickupMtaaniAPI {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseURL}${endpoint}`
     const headers = {
-      'Authorization': `Bearer ${this.apiKey}`,
+      'apikey': this.apiKey,
       'Content-Type': 'application/json',
       ...options.headers,
     }

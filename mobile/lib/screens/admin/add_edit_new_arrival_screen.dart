@@ -7,8 +7,13 @@ import 'package:mobile/services/supabase_service.dart';
 
 class AddEditNewArrivalScreen extends StatefulWidget {
   final NewArrival? newArrival;
+  final int? displayOrder;
 
-  const AddEditNewArrivalScreen({super.key, this.newArrival});
+  const AddEditNewArrivalScreen({
+    super.key,
+    this.newArrival,
+    this.displayOrder,
+  });
 
   @override
   State<AddEditNewArrivalScreen> createState() =>
@@ -22,6 +27,7 @@ class _AddEditNewArrivalScreenState extends State<AddEditNewArrivalScreen> {
 
   late TextEditingController _titleController;
   late TextEditingController _descriptionController;
+  late TextEditingController _linkUrlController;
   late TextEditingController _displayOrderController;
 
   File? _imageFile;
@@ -35,8 +41,11 @@ class _AddEditNewArrivalScreenState extends State<AddEditNewArrivalScreen> {
     _titleController = TextEditingController(text: widget.newArrival?.title);
     _descriptionController =
         TextEditingController(text: widget.newArrival?.description);
+    _linkUrlController =
+        TextEditingController(text: widget.newArrival?.linkUrl);
     _displayOrderController = TextEditingController(
-        text: widget.newArrival?.displayOrder.toString() ?? '0');
+        text: (widget.displayOrder ?? widget.newArrival?.displayOrder ?? 0)
+            .toString());
     _currentImageUrl = widget.newArrival?.imageUrl;
     _isActive = widget.newArrival?.isActive ?? true;
   }
@@ -45,6 +54,7 @@ class _AddEditNewArrivalScreenState extends State<AddEditNewArrivalScreen> {
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    _linkUrlController.dispose();
     _displayOrderController.dispose();
     super.dispose();
   }
@@ -81,6 +91,8 @@ class _AddEditNewArrivalScreenState extends State<AddEditNewArrivalScreen> {
       final data = {
         'title': _titleController.text,
         'description': _descriptionController.text,
+        'link_url':
+            _linkUrlController.text.isEmpty ? null : _linkUrlController.text,
         'display_order': int.parse(_displayOrderController.text),
         'is_active': _isActive,
         'image_url': imageUrl,
@@ -182,6 +194,15 @@ class _AddEditNewArrivalScreenState extends State<AddEditNewArrivalScreen> {
                         border: OutlineInputBorder(),
                       ),
                       maxLines: 3,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _linkUrlController,
+                      decoration: const InputDecoration(
+                        labelText: 'Link URL (Optional)',
+                        border: OutlineInputBorder(),
+                        hintText: '/products or /categories/electronics',
+                      ),
                     ),
                     const SizedBox(height: 16),
                     TextFormField(

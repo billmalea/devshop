@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mobile/models/product.dart';
 import 'package:mobile/models/category.dart';
+import 'package:mobile/models/new_arrival.dart';
 
 class SupabaseService {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -55,6 +56,20 @@ class SupabaseService {
       return (response as List).map((e) => Category.fromJson(e)).toList();
     } catch (e) {
       throw Exception('Failed to load categories: $e');
+    }
+  }
+
+  Future<List<NewArrival>> getNewArrivals() async {
+    try {
+      final response = await _supabase
+          .from('new_arrivals')
+          .select()
+          .eq('is_active', true)
+          .order('display_order');
+
+      return (response as List).map((e) => NewArrival.fromJson(e)).toList();
+    } catch (e) {
+      throw Exception('Failed to load new arrivals: $e');
     }
   }
 

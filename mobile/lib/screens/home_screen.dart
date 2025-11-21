@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:mobile/models/product.dart';
+import 'package:mobile/models/new_arrival.dart';
 import 'package:mobile/providers/cart_provider.dart';
 import 'package:mobile/screens/brands_screen.dart';
 import 'package:mobile/screens/cart_screen.dart';
@@ -72,21 +74,49 @@ class HomeContent extends StatefulWidget {
 class _HomeContentState extends State<HomeContent> {
   final SupabaseService _supabaseService = SupabaseService();
   List<Product> _featuredProducts = [];
+  List<NewArrival> _newArrivals = [];
   bool _isLoading = true;
+  late PageController _pageController;
+  int _currentPage = 0;
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
+    _pageController = PageController();
     _loadData();
+    _startAutoSlide();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _startAutoSlide() {
+    _timer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (_newArrivals.isNotEmpty && mounted) {
+        final nextPage = (_currentPage + 1) % _newArrivals.length;
+        _pageController.animateToPage(
+          nextPage,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
   }
 
   Future<void> _loadData() async {
     try {
       final products = await _supabaseService.getProducts();
+      final newArrivals = await _supabaseService.getNewArrivals();
 
       if (mounted) {
         setState(() {
           _featuredProducts = products.take(8).toList();
+          _newArrivals = newArrivals;
           _isLoading = false;
         });
       }
@@ -191,33 +221,140 @@ class _HomeContentState extends State<HomeContent> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Hero Section
-                      Container(
-                        height: 200,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.secondary,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(LucideIcons.image,
-                                  size: 48,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSecondary),
-                              const SizedBox(height: 8),
-                              Text(
-                                'New Arrivals',
-                                style:
-                                    Theme.of(context).textTheme.headlineSmall,
+                      // New Arrivals Slider
+                      _newArrivals.isEmpty
+                          ? Container(
+                              height: 200,
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.secondary,
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                            ],
-                          ),
-                        ),
-                      ),
+                              child: Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(LucideIcons.image,
+                                        size: 48,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSecondary),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'New Arrivals',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .headlineSmall,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          : SizedBox(
+                              height: 200,
+                              child: Stack(
+                                children: [
+                                  PageView.builder(
+                                    controller: _pageController,
+                                    onPageChanged: (index) {
+                                      setState(() {
+                                        _currentPage = index;
+                                      });
+                                    },
+                                    itemCount: _newArrivals.length,
+                                    itemBuilder: (context, index) {
+                                      final arrival = _newArrivals[index];
+                                      return Container(
+                                        margin: const EdgeInsets.symmetric(
+                                            horizontal: 4),
+                                        decoration: BoxDecoration(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          image: DecorationImage(
+                                            image:
+                                                NetworkImage(arrival.imageUrl),
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            gradient: LinearGradient(
+                                              begin: Alignment.topCenter,
+                                              end: Alignment.bottomCenter,
+                                              colors: [
+                                                Colors.transparent,
+                                                Colors.black.withOpacity(0.7),
+                                              ],
+                                            ),
+                                          ),
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(16.0),
+                                            child: Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.end,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                if (arrival.title != null)
+                                                  Text(
+                                                    arrival.title!,
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 20,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                if (arrival.description != null)
+                                                  const SizedBox(height: 4),
+                                                if (arrival.description != null)
+                                                  Text(
+                                                    arrival.description!,
+                                                    style: const TextStyle(
+                                                      color: Colors.white70,
+                                                      fontSize: 14,
+                                                    ),
+                                                    maxLines: 2,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  // Dot indicators
+                                  Positioned(
+                                    bottom: 8,
+                                    left: 0,
+                                    right: 0,
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: List.generate(
+                                        _newArrivals.length,
+                                        (index) => Container(
+                                          margin: const EdgeInsets.symmetric(
+                                              horizontal: 4),
+                                          width: 8,
+                                          height: 8,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: _currentPage == index
+                                                ? Colors.white
+                                                : Colors.white.withOpacity(0.4),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                       const SizedBox(height: 24),
 
                       // Featured Products

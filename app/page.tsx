@@ -13,6 +13,13 @@ export default async function HomePage() {
     .select('*')
     .limit(8)
 
+  const { data: newArrivals } = await supabase
+    .from('new_arrivals')
+    .select('*')
+    .eq('is_active', true)
+    .order('display_order')
+    .limit(3)
+
   if (error) {
     console.error("[v0] Error fetching products:", error);
   }
@@ -91,40 +98,63 @@ export default async function HomePage() {
                 <Cpu className="h-5 w-5 lg:h-8 lg:w-8 text-blue-500" />
               </div>
 
-              {/* Merch Cards Stack (2 on Mobile, 3 on Desktop) */}
+              {/* New Arrivals Cards Stack */}
               <div className="relative z-10 flex items-center justify-center -space-x-16 lg:-space-x-24 hover:space-x-4 transition-all duration-700 ease-out">
-                {/* Card 1: Hoodie */}
-                <div className="relative aspect-[3/4] w-48 lg:w-72 rounded-2xl overflow-hidden bg-secondary border border-border shadow-2xl -rotate-12 hover:rotate-0 hover:scale-105 hover:z-20 transition-all duration-500 origin-bottom-right">
-                  <div className="absolute inset-0 flex items-center justify-center bg-muted">
-                    <Shirt className="h-16 w-16 lg:h-32 lg:w-32 text-muted-foreground/20" />
-                  </div>
-                  <div className="absolute bottom-0 left-0 right-0 p-3 lg:p-6 bg-background/90 backdrop-blur-sm border-t border-border">
-                    <p className="font-bold text-sm lg:text-xl">Dev Hoodies</p>
-                    <p className="text-[10px] lg:text-sm text-muted-foreground">Premium Cotton</p>
-                  </div>
-                </div>
-
-                {/* Card 2: Keyboard (Hidden on Mobile) */}
-                <div className="relative hidden lg:block aspect-[3/4] w-48 lg:w-72 rounded-2xl overflow-hidden bg-secondary border border-border shadow-2xl z-10 hover:scale-110 hover:z-30 transition-all duration-500 -translate-y-8 lg:-translate-y-16">
-                  <div className="absolute inset-0 flex items-center justify-center bg-muted">
-                    <Keyboard className="h-16 w-16 lg:h-32 lg:w-32 text-muted-foreground/20" />
-                  </div>
-                  <div className="absolute bottom-0 left-0 right-0 p-3 lg:p-6 bg-background/90 backdrop-blur-sm border-t border-border">
-                    <p className="font-bold text-sm lg:text-xl">Mech Keys</p>
-                    <p className="text-[10px] lg:text-sm text-muted-foreground">Tactile Switches</p>
-                  </div>
-                </div>
-
-                {/* Card 3: Sticker */}
-                <div className="relative aspect-[3/4] w-48 lg:w-72 rounded-2xl overflow-hidden bg-secondary border border-border shadow-2xl rotate-12 hover:rotate-0 hover:scale-105 hover:z-20 transition-all duration-500 origin-bottom-left">
-                  <div className="absolute inset-0 flex items-center justify-center bg-muted">
-                    <Sticker className="h-16 w-16 lg:h-32 lg:w-32 text-muted-foreground/20" />
-                  </div>
-                  <div className="absolute bottom-0 left-0 right-0 p-3 lg:p-6 bg-background/90 backdrop-blur-sm border-t border-border">
-                    <p className="font-bold text-sm lg:text-xl">Laptop Stickers</p>
-                    <p className="text-[10px] lg:text-sm text-muted-foreground">Die-cut Vinyl</p>
-                  </div>
-                </div>
+                {newArrivals && newArrivals.length > 0 ? (
+                  newArrivals.map((arrival, index) => (
+                    <div
+                      key={arrival.id}
+                      className={`relative aspect-[3/4] w-48 lg:w-72 rounded-2xl overflow-hidden bg-secondary border border-border shadow-2xl transition-all duration-500 ${index === 0 ? '-rotate-12 hover:rotate-0 hover:scale-105 hover:z-20 origin-bottom-right' :
+                          index === 1 ? 'z-10 hover:scale-110 hover:z-30 -translate-y-8 lg:-translate-y-16 hidden lg:block' :
+                            'rotate-12 hover:rotate-0 hover:scale-105 hover:z-20 origin-bottom-left'
+                        }`}
+                    >
+                      <Image
+                        src={arrival.image_url}
+                        alt={arrival.title || 'New Arrival'}
+                        fill
+                        className="object-cover"
+                      />
+                      {(arrival.title || arrival.description) && (
+                        <div className="absolute bottom-0 left-0 right-0 p-3 lg:p-6 bg-background/90 backdrop-blur-sm border-t border-border">
+                          {arrival.title && <p className="font-bold text-sm lg:text-xl">{arrival.title}</p>}
+                          {arrival.description && <p className="text-[10px] lg:text-sm text-muted-foreground">{arrival.description}</p>}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  // Fallback to placeholders if no new arrivals
+                  <>
+                    <div className="relative aspect-[3/4] w-48 lg:w-72 rounded-2xl overflow-hidden bg-secondary border border-border shadow-2xl -rotate-12 hover:rotate-0 hover:scale-105 hover:z-20 transition-all duration-500 origin-bottom-right">
+                      <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                        <Shirt className="h-16 w-16 lg:h-32 lg:w-32 text-muted-foreground/20" />
+                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 p-3 lg:p-6 bg-background/90 backdrop-blur-sm border-t border-border">
+                        <p className="font-bold text-sm lg:text-xl">Dev Hoodies</p>
+                        <p className="text-[10px] lg:text-sm text-muted-foreground">Premium Cotton</p>
+                      </div>
+                    </div>
+                    <div className="relative hidden lg:block aspect-[3/4] w-48 lg:w-72 rounded-2xl overflow-hidden bg-secondary border border-border shadow-2xl z-10 hover:scale-110 hover:z-30 transition-all duration-500 -translate-y-8 lg:-translate-y-16">
+                      <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                        <Keyboard className="h-16 w-16 lg:h-32 lg:w-32 text-muted-foreground/20" />
+                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 p-3 lg:p-6 bg-background/90 backdrop-blur-sm border-t border-border">
+                        <p className="font-bold text-sm lg:text-xl">Mech Keys</p>
+                        <p className="text-[10px] lg:text-sm text-muted-foreground">Tactile Switches</p>
+                      </div>
+                    </div>
+                    <div className="relative aspect-[3/4] w-48 lg:w-72 rounded-2xl overflow-hidden bg-secondary border border-border shadow-2xl rotate-12 hover:rotate-0 hover:scale-105 hover:z-20 transition-all duration-500 origin-bottom-left">
+                      <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                        <Sticker className="h-16 w-16 lg:h-32 lg:w-32 text-muted-foreground/20" />
+                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 p-3 lg:p-6 bg-background/90 backdrop-blur-sm border-t border-border">
+                        <p className="font-bold text-sm lg:text-xl">Laptop Stickers</p>
+                        <p className="text-[10px] lg:text-sm text-muted-foreground">Die-cut Vinyl</p>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>

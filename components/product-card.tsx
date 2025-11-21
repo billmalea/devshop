@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ShoppingCart } from 'lucide-react'
+import { ShoppingCart, Minus, Plus } from 'lucide-react'
 import { useCart } from "@/components/cart-provider"
 
 interface Product {
@@ -24,7 +24,9 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-  const { addItem } = useCart()
+  const { addItem, items, updateQuantity } = useCart()
+  const cartItem = items.find((item) => item.id === product.id)
+  const quantity = cartItem ? cartItem.quantity : 0
 
   const formattedPrice = new Intl.NumberFormat('en-KE', {
     style: 'currency',
@@ -81,14 +83,48 @@ export function ProductCard({ product }: ProductCardProps) {
         <div className="font-heading font-bold text-lg text-foreground">
           {formattedPrice}
         </div>
-        <Button
-          className="bg-foreground text-background hover:bg-foreground/90 font-medium text-sm rounded-full px-6"
-          disabled={product.stock === 0}
-          onClick={handleAddToCart}
-        >
-          <ShoppingCart className="mr-2 h-4 w-4" />
-          Add to Cart
-        </Button>
+        {quantity > 0 ? (
+          <div className="flex items-center gap-2 bg-secondary/50 rounded-full px-1 py-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full hover:bg-background"
+              onClick={(e) => {
+                e.preventDefault()
+                updateQuantity(product.id, quantity - 1)
+              }}
+            >
+              <Minus className="h-3 w-3" />
+            </Button>
+            <span className="font-bold text-sm w-4 text-center">{quantity}</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full hover:bg-background"
+              onClick={(e) => {
+                e.preventDefault()
+                if (product.stock > quantity) {
+                  updateQuantity(product.id, quantity + 1)
+                }
+              }}
+              disabled={quantity >= product.stock}
+            >
+              <Plus className="h-3 w-3" />
+            </Button>
+          </div>
+        ) : (
+          <Button
+            className="bg-foreground text-background hover:bg-foreground/90 font-medium text-sm rounded-full px-6"
+            disabled={product.stock === 0}
+            onClick={(e) => {
+              e.preventDefault()
+              handleAddToCart()
+            }}
+          >
+            <ShoppingCart className="mr-2 h-4 w-4" />
+            Add to Cart
+          </Button>
+        )}
       </CardFooter>
     </Card>
   )

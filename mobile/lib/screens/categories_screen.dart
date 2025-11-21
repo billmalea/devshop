@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:mobile/models/category.dart';
 import 'package:mobile/models/product.dart';
 import 'package:mobile/services/supabase_service.dart';
 import 'package:mobile/widgets/product_card.dart';
@@ -14,7 +15,7 @@ class CategoriesScreen extends StatefulWidget {
 class _CategoriesScreenState extends State<CategoriesScreen>
     with SingleTickerProviderStateMixin {
   final SupabaseService _supabaseService = SupabaseService();
-  List<String> _categories = [];
+  List<Category> _categories = [];
   List<Product> _products = [];
   bool _isLoading = true;
   late TabController _tabController;
@@ -54,14 +55,16 @@ class _CategoriesScreenState extends State<CategoriesScreen>
     }
   }
 
-  Future<void> _loadProductsByCategory(String category) async {
+  Future<void> _loadProductsByCategory(Category category) async {
     setState(() {
       _isLoading = true;
       _currentTabIndex = _categories.indexOf(category);
     });
 
     try {
-      final products = await _supabaseService.getProductsByCategory(category);
+      // Use slug for querying products as per web app convention
+      final products =
+          await _supabaseService.getProductsByCategory(category.slug);
       if (mounted) {
         setState(() {
           _products = products;
@@ -106,25 +109,52 @@ class _CategoriesScreenState extends State<CategoriesScreen>
                 ),
               ),
             ),
-            child: TabBar(
-              controller: _tabController,
-              isScrollable: true,
-              labelColor: Theme.of(context).colorScheme.onSurface,
-              unselectedLabelColor:
-                  Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-              indicatorColor: Theme.of(context).colorScheme.onSurface,
-              indicatorSize: TabBarIndicatorSize.label,
-              labelStyle: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: TabBar(
+                controller: _tabController,
+                isScrollable: true,
+                labelColor: Theme.of(context).colorScheme.onPrimary,
+                unselectedLabelColor: Theme.of(context).colorScheme.onSurface,
+                indicator: BoxDecoration(
+                  borderRadius: BorderRadius.circular(50),
+                  color: Theme.of(context).colorScheme.tertiary,
+                ),
+                indicatorSize: TabBarIndicatorSize.tab,
+                dividerColor: Colors.transparent,
+                labelStyle: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+                unselectedLabelStyle: const TextStyle(
+                  fontWeight: FontWeight.normal,
+                  fontSize: 14,
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+                tabAlignment: TabAlignment.start,
+                tabs: _categories
+                    .map((category) => Tab(
+                          height: 32,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(50),
+                              border: Border.all(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .outline
+                                    .withOpacity(0.2),
+                              ),
+                            ),
+                            child: Align(
+                              alignment: Alignment.center,
+                              child: Text(category.name),
+                            ),
+                          ),
+                        ))
+                    .toList(),
               ),
-              unselectedLabelStyle: const TextStyle(
-                fontWeight: FontWeight.normal,
-                fontSize: 14,
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              tabAlignment: TabAlignment.start,
-              tabs: _categories.map((category) => Tab(text: category)).toList(),
             ),
           ),
           Expanded(
@@ -156,9 +186,9 @@ class _CategoriesScreenState extends State<CategoriesScreen>
                           gridDelegate:
                               const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
-                            childAspectRatio: 0.75,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                            childAspectRatio: 0.7,
                           ),
                           itemCount: _products.length,
                           itemBuilder: (context, index) {

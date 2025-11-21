@@ -6,6 +6,7 @@ import 'package:mobile/screens/brands_screen.dart';
 import 'package:mobile/screens/cart_screen.dart';
 import 'package:mobile/screens/categories_screen.dart';
 import 'package:mobile/screens/profile_screen.dart';
+import 'package:mobile/providers/theme_provider.dart';
 import 'package:mobile/services/supabase_service.dart';
 import 'package:mobile/widgets/product_card.dart';
 import 'package:provider/provider.dart';
@@ -105,15 +106,44 @@ class _HomeContentState extends State<HomeContent> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'DevShop',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            const Text(
+              'DevShop',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                height: 1.0,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Container(
+              margin: const EdgeInsets.only(bottom: 4),
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.tertiary,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ],
         ),
         actions: [
+          IconButton(
+            icon: Icon(
+              Theme.of(context).brightness == Brightness.dark
+                  ? LucideIcons.sun
+                  : LucideIcons.moon,
+            ),
+            onPressed: () {
+              context.read<ThemeProvider>().toggleTheme();
+            },
+          ),
           Stack(
             children: [
               IconButton(
-                icon: const Icon(LucideIcons.shoppingBag),
+                icon: const Icon(LucideIcons.shoppingCart),
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -202,9 +232,9 @@ class _HomeContentState extends State<HomeContent> {
                         gridDelegate:
                             const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
-                          childAspectRatio: 0.75,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: 0.7,
                         ),
                         itemCount: _featuredProducts.length,
                         itemBuilder: (context, index) {

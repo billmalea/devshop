@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mobile/models/product.dart';
+import 'package:mobile/models/category.dart';
 
 class SupabaseService {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -43,17 +44,15 @@ class SupabaseService {
     return Product.fromJson(response);
   }
 
-  Future<List<String>> getCategories() async {
+  Future<List<Category>> getCategories() async {
     try {
-      final response =
-          await _supabase.from('products').select('category').order('category');
+      final response = await _supabase
+          .from('categories')
+          .select()
+          .filter('parent_id', 'is', null)
+          .order('name');
 
-      final categories = <String>{};
-      for (final item in response) {
-        categories.add(item['category'] as String);
-      }
-
-      return categories.toList();
+      return (response as List).map((e) => Category.fromJson(e)).toList();
     } catch (e) {
       throw Exception('Failed to load categories: $e');
     }

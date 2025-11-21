@@ -4,6 +4,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:mobile/models/product.dart';
 import 'package:mobile/providers/cart_provider.dart';
 import 'package:mobile/widgets/toast.dart';
+import 'package:mobile/screens/cart_screen.dart';
 import 'package:provider/provider.dart';
 
 class ProductDetailsScreen extends StatelessWidget {
@@ -13,12 +14,51 @@ class ProductDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cartItemCount = context.watch<CartProvider>().itemCount;
     final currencyFormat =
         NumberFormat.currency(symbol: 'KES ', decimalDigits: 0);
 
     return Scaffold(
       appBar: AppBar(
         actions: [
+          Stack(
+            children: [
+              IconButton(
+                icon: const Icon(LucideIcons.shoppingCart),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const CartScreen()),
+                  );
+                },
+              ),
+              if (cartItemCount > 0)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.error,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
+                    child: Text(
+                      '$cartItemCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
           IconButton(
             icon: const Icon(LucideIcons.share2),
             onPressed: () {},

@@ -94,25 +94,52 @@ class _BrandsScreenState extends State<BrandsScreen>
                 ),
               ),
             ),
-            child: TabBar(
-              controller: _tabController,
-              isScrollable: true,
-              labelColor: Theme.of(context).colorScheme.onSurface,
-              unselectedLabelColor:
-                  Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-              indicatorColor: Theme.of(context).colorScheme.onSurface,
-              indicatorSize: TabBarIndicatorSize.label,
-              labelStyle: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: TabBar(
+                controller: _tabController,
+                isScrollable: true,
+                labelColor: Theme.of(context).colorScheme.onPrimary,
+                unselectedLabelColor: Theme.of(context).colorScheme.onSurface,
+                indicator: BoxDecoration(
+                  borderRadius: BorderRadius.circular(50),
+                  color: Theme.of(context).colorScheme.tertiary,
+                ),
+                indicatorSize: TabBarIndicatorSize.tab,
+                dividerColor: Colors.transparent,
+                labelStyle: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+                unselectedLabelStyle: const TextStyle(
+                  fontWeight: FontWeight.normal,
+                  fontSize: 14,
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+                tabAlignment: TabAlignment.start,
+                tabs: _brands
+                    .map((brand) => Tab(
+                          height: 32,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(50),
+                              border: Border.all(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .outline
+                                    .withOpacity(0.2),
+                              ),
+                            ),
+                            child: Align(
+                              alignment: Alignment.center,
+                              child: Text(brand),
+                            ),
+                          ),
+                        ))
+                    .toList(),
               ),
-              unselectedLabelStyle: const TextStyle(
-                fontWeight: FontWeight.normal,
-                fontSize: 14,
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              tabAlignment: TabAlignment.start,
-              tabs: _brands.map((brand) => Tab(text: brand)).toList(),
             ),
           ),
           Expanded(
@@ -144,9 +171,9 @@ class _BrandsScreenState extends State<BrandsScreen>
                           gridDelegate:
                               const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
-                            childAspectRatio: 0.75,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                            childAspectRatio: 0.7,
                           ),
                           itemCount: _products.length,
                           itemBuilder: (context, index) {

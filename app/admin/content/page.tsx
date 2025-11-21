@@ -17,8 +17,14 @@ interface NewArrival {
   is_active: boolean
 }
 
+interface SelectedFile {
+  file: File
+  preview: string
+}
+
 export default function ContentPage() {
   const [newArrivals, setNewArrivals] = useState<NewArrival[]>([])
+  const [selectedFiles, setSelectedFiles] = useState<(SelectedFile | null)[]>([null, null, null])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState<number | null>(null)
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([])
@@ -55,22 +61,33 @@ export default function ContentPage() {
     }
   }
 
-  const handleFileUpload = async (index: number, file: File) => {
+  const handleFileSelect = (index: number, file: File | null) => {
     if (!file) return
+
+    // Create preview URL
+    const preview = URL.createObjectURL(file)
+    const updated = [...selectedFiles]
+    updated[index] = { file, preview }
+    setSelectedFiles(updated)
+  }
+
+  const handleUpload = async (index: number) => {
+    const selectedFile = selectedFiles[index]
+    if (!selectedFile) return
 
     setUploading(index)
     try {
       const supabase = createClient()
 
       // Generate unique filename
-      const fileExt = file.name.split('.').pop()
+      const fileExt = selectedFile.file.name.split('.').pop()
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
       const filePath = `${fileName}`
 
       // Upload to Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('new-arrivals')
-        .upload(filePath, file, {
+        .upload(filePath, selectedFile.file, {
           cacheControl: '3600',
           upsert: false
         })
@@ -89,6 +106,11 @@ export default function ContentPage() {
         image_url: publicUrl
       }
       setNewArrivals(updated)
+
+      // Clear selected file
+      const updatedSelected = [...selectedFiles]
+      updatedSelected[index] = null
+      setSelectedFiles(updatedSelected)
 
       alert('Image uploaded successfully!')
     } catch (error: any) {
@@ -240,7 +262,16 @@ export default function ContentPage() {
                 {/* Image Preview/Upload */}
                 <div className="flex-shrink-0">
                   <div className="w-48 h-64 border-2 border-dashed border-border rounded-lg overflow-hidden bg-secondary/20 relative">
-                    {arrival.image_url ? (
+                    {selectedFiles[index] ? (
+                      // Show preview of selected file
+                      <Image
+                        src={selectedFiles[index]!.preview}
+                        alt="Preview"
+                        fill
+                        className="object-cover"
+                      />
+                    ) : arrival.image_url ? (
+                      // Show uploaded image
                       <Image
                         src={arrival.image_url}
                         alt={arrival.title || `Slot ${index + 1}`}
@@ -248,6 +279,7 @@ export default function ContentPage() {
                         className="object-cover"
                       />
                     ) : (
+                      // Show placeholder
                       <div className="absolute inset-0 flex items-center justify-center">
                         <ImageIcon className="h-12 w-12 text-muted-foreground/30" />
                       </div>
@@ -260,18 +292,29 @@ export default function ContentPage() {
                     className="hidden"
                     onChange={(e) => {
                       const file = e.target.files?.[0]
-                      if (file) handleFileUpload(index, file)
+                      if (file) handleFileSelect(index, file)
                     }}
                   />
-                  <Button
-                    onClick={() => fileInputRefs.current[index]?.click()}
-                    disabled={uploading === index}
-                    className="w-full mt-2"
-                    variant="outline"
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    {uploading === index ? 'Uploading...' : arrival.image_url ? 'Replace' : 'Upload'}
-                  </Button>
+                  <div className="flex gap-2 mt-2">
+                    <Button
+                      onClick={() => fileInputRefs.current[index]?.click()}
+                      disabled={uploading === index}
+                      className="flex-1"
+                      variant="outline"
+                    >
+                      Select Image
+                    </Button>
+                    {selectedFiles[index] && (
+                      <Button
+                        onClick={() => handleUpload(index)}
+                        disabled={uploading === index}
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        {uploading === index ? 'Uploading...' : 'Upload'}
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Form Fields */}

@@ -1,10 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:mobile/config.dart';
 import 'package:mobile/providers/cart_provider.dart';
 import 'package:mobile/services/api_service.dart';
-import 'package:mobile/services/supabase_service.dart';
 import 'package:mobile/widgets/toast.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -26,19 +26,34 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final _cityController = TextEditingController();
   final ApiService _apiService = ApiService();
 
-  String _shippingMethod = 'delivery'; // 'delivery' or 'pickup'
+  String _shippingMethod = 'pickup'; // 'pickup' or 'doorstep'
   String _paymentMethod = 'mpesa'; // 'mpesa' or 'cod'
-  List<Map<String, dynamic>> _pickupLocations = [];
+
+  // Location Data
+  List<Map<String, dynamic>> _areas = [];
+  List<Map<String, dynamic>> _locations = [];
+  List<Map<String, dynamic>> _agents = [];
+  List<Map<String, dynamic>> _doorstepDestinations = [];
+
+  // Selected Values
+  String? _selectedAreaId;
   String? _selectedLocationId;
+  String? _selectedAgentId;
+  String? _selectedDoorstepId;
+  String? _originId;
+
   bool _isLoadingLocations = true;
+  bool _isLoadingAgents = false;
   bool _isProcessing = false;
   bool _isSuccess = false;
   double? _deliveryFee;
   bool _isCalculatingFee = false;
+  bool _isLoadingDoorstepDestinations = false;
 
   @override
   void initState() {
     super.initState();
+    _loadOriginSettings();
     _loadPickupLocations();
     _prefillUserData();
   }
@@ -54,23 +69,44 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     super.dispose();
   }
 
-  Future<void> _prefillUserData() async {
+  void _prefillUserData() async {
     try {
       final user = Supabase.instance.client.auth.currentUser;
-      if (user != null) {
-        _emailController.text = user.email ?? '';
+      if (user == null) return;
 
-        final profile = await SupabaseService().getProfile(user.id);
-        if (profile != null && mounted) {
-          final fullName = profile['full_name'] as String? ?? '';
-          final parts = fullName.split(' ');
+      // Set email
+      if (user.email != null && user.email!.isNotEmpty) {
+        _emailController.text = user.email!;
+      }
+
+      // Fetch profile from database
+      final response = await Supabase.instance.client
+          .from('profiles')
+          .select('full_name, phone_number')
+          .eq('id', user.id)
+          .maybeSingle();
+
+      if (response != null) {
+        // Handle full name
+        final fullName = response['full_name'] as String? ??
+            user.userMetadata?['full_name'] as String? ??
+            '';
+        if (fullName.isNotEmpty) {
+          final parts = fullName.trim().split(RegExp(r'\s+'));
           if (parts.isNotEmpty) {
-            _firstNameController.text = parts.first;
+            _firstNameController.text = parts[0];
             if (parts.length > 1) {
               _lastNameController.text = parts.sublist(1).join(' ');
             }
           }
-          _phoneController.text = profile['phone_number'] as String? ?? '';
+        }
+
+        // Handle phone number
+        final phoneNumber = response['phone_number'] as String? ??
+            user.userMetadata?['phone'] as String? ??
+            '';
+        if (phoneNumber.isNotEmpty) {
+          _phoneController.text = phoneNumber;
         }
       }
     } catch (e) {
@@ -78,17 +114,90 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
-  Future<void> _loadPickupLocations() async {
+  Future<void> _loadOriginSettings() async {
     try {
-      final locations = await _apiService.getPickupLocations();
+      // Fetch settings directly from Supabase (app_settings table)
+      final response = await Supabase.instance.client
+          .from('app_settings')
+          .select('value')
+          .eq('key', 'pickup_mtaani_origin')
+          .maybeSingle();
+
+      debugPrint('Settings response from Supabase: $response');
+
+      if (response != null && response['value'] != null) {
+        var origin = response['value'];
+        debugPrint('Origin data (raw): $origin');
+
+        // Handle case where origin is a JSON string
+        if (origin is String) {
+          try {
+            origin = json.decode(origin);
+          } catch (e) {
+            debugPrint('Error parsing origin JSON string: $e');
+          }
+        }
+
+        if (origin is Map) {
+          if (mounted) {
+            setState(() {
+              // Prefer agent_id, fallback to location_id
+              _originId = origin['agent_id']?.toString() ??
+                  origin['location_id']?.toString() ??
+                  '';
+              debugPrint('Set origin ID: $_originId');
+            });
+          }
+        }
+      } else {
+        debugPrint('No pickup_mtaani_origin setting found');
+      }
+    } catch (e) {
+      debugPrint('Error loading origin settings: $e');
+      // Fallback to Config.pickupMtaaniOriginId will be used
+    }
+  }
+
+  Future<void> _loadPickupLocations() async {
+    setState(() => _isLoadingLocations = true);
+    try {
+      // Only load areas initially, locations will be loaded when area is selected
+      final areas = await _apiService.getPickupAreas();
+
       if (mounted) {
         setState(() {
-          _pickupLocations = locations;
+          _areas = areas;
           _isLoadingLocations = false;
         });
       }
     } catch (e) {
-      debugPrint('Error loading locations: $e');
+      debugPrint('Error loading pickup areas: $e');
+      if (mounted) {
+        setState(() => _isLoadingLocations = false);
+        Toast.error(context, 'Failed to load pickup areas');
+      }
+    }
+  }
+
+  Future<void> _loadLocationsByArea(String areaId) async {
+    setState(() {
+      _isLoadingLocations = true;
+      _locations = [];
+      _agents = [];
+      _selectedLocationId = null;
+      _selectedAgentId = null;
+    });
+
+    try {
+      final locations = await _apiService.getPickupLocations(areaId: areaId);
+      if (mounted) {
+        setState(() {
+          _locations = locations;
+          _isLoadingLocations = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading pickup locations: $e');
       if (mounted) {
         setState(() => _isLoadingLocations = false);
         Toast.error(context, 'Failed to load pickup locations');
@@ -96,33 +205,114 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
-  Future<void> _calculateDeliveryFee(String locationId) async {
-    if (_shippingMethod != 'pickup') return;
-
+  Future<void> _loadAgents(String locationId) async {
     setState(() {
-      _selectedLocationId = locationId;
-      _isCalculatingFee = true;
+      _isLoadingAgents = true;
+      _agents = [];
+      _selectedAgentId = null;
     });
 
     try {
-      final originId = Config.pickupMtaaniOriginId.isNotEmpty
-          ? Config.pickupMtaaniOriginId
-          : 'DEFAULT_ORIGIN';
-      final result =
-          await _apiService.calculateDeliveryCharge(originId, locationId);
+      final agents = await _apiService.getPickupAgents(locationId);
       if (mounted) {
         setState(() {
-          _deliveryFee = (result['price'] as num?)?.toDouble() ?? 150.0;
+          _agents = agents;
+          _isLoadingAgents = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading pickup agents: $e');
+      if (mounted) {
+        setState(() => _isLoadingAgents = false);
+        Toast.error(context, 'Failed to load pickup agents');
+      }
+    }
+  }
+
+  Future<void> _loadDoorstepDestinations(String areaId) async {
+    setState(() {
+      _isLoadingDoorstepDestinations = true;
+      _doorstepDestinations = [];
+    });
+
+    try {
+      final destinations =
+          await _apiService.getDoorstepDestinations(areaId: areaId);
+      if (mounted) {
+        setState(() {
+          _doorstepDestinations = destinations;
+          _isLoadingDoorstepDestinations = false;
+        });
+
+        // Show message if no destinations available
+        if (destinations.isEmpty) {
+          Toast.info(context, 'Door delivery not available in this area');
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading doorstep destinations: $e');
+      if (mounted) {
+        setState(() => _isLoadingDoorstepDestinations = false);
+        Toast.error(context, 'Failed to load doorstep destinations');
+      }
+    }
+  }
+
+  Future<void> _calculateDeliveryFee(String destinationId, String type) async {
+    setState(() {
+      _isCalculatingFee = true;
+      _deliveryFee = null;
+    });
+
+    // Retry loading origin if missing
+    if (_originId == null || _originId!.isEmpty) {
+      await _loadOriginSettings();
+    }
+
+    final originId = _originId ?? Config.pickupMtaaniOriginId;
+    debugPrint(
+        'Calculating delivery fee: origin=$originId, destination=$destinationId, type=$type');
+
+    if (originId.isEmpty) {
+      debugPrint('Error: Origin ID is empty');
+      if (mounted) {
+        setState(() {
+          _isCalculatingFee = false;
+          _deliveryFee = 250.0;
+        });
+        Toast.error(context, 'Origin location not configured');
+      }
+      return;
+    }
+
+    try {
+      final response = await _apiService.calculateDeliveryCharge(
+        originId,
+        destinationId,
+        type,
+      );
+
+      debugPrint('Delivery fee response: $response');
+
+      if (mounted) {
+        setState(() {
+          _deliveryFee = response['amount']?.toDouble() ??
+              response['price']?.toDouble() ??
+              response['data']?['amount']?.toDouble() ??
+              response['data']?['price']?.toDouble() ??
+              250.0;
           _isCalculatingFee = false;
         });
       }
     } catch (e) {
-      debugPrint('Delivery calculation error: $e');
+      debugPrint('Error calculating delivery fee: $e');
       if (mounted) {
         setState(() {
-          _deliveryFee = 150.0;
           _isCalculatingFee = false;
+          _deliveryFee = 250.0; // Fallback
         });
+        Toast.error(
+            context, 'Could not calculate delivery fee. Using default.');
       }
     }
   }
@@ -130,8 +320,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Future<void> _submitOrder() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_shippingMethod == 'pickup' && _selectedLocationId == null) {
-      Toast.error(context, 'Please select a pickup location');
+    if (_shippingMethod == 'pickup' && _selectedAgentId == null) {
+      Toast.error(context, 'Please select a pickup agent');
+      return;
+    }
+
+    if (_shippingMethod == 'doorstep' && _selectedDoorstepId == null) {
+      Toast.error(context, 'Please select a delivery destination');
       return;
     }
 
@@ -140,7 +335,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     try {
       final cart = context.read<CartProvider>();
       final shippingFee =
-          _shippingMethod == 'pickup' ? (_deliveryFee ?? 0) : 250.0;
+          (_shippingMethod == 'pickup' || _shippingMethod == 'doorstep')
+              ? (_deliveryFee ?? 0)
+              : 250.0;
       final totalAmount = cart.totalAmount + shippingFee;
       final phoneNumber =
           _apiService.normalizePhoneNumber(_phoneController.text.trim());
@@ -163,7 +360,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         items: orderItems,
         totalAmount: totalAmount,
         phoneNumber: phoneNumber,
-        pickupLocation: _selectedLocationId,
+        pickupLocation: _shippingMethod == 'pickup' ? _selectedAgentId : null,
+        deliveryAddress: _shippingMethod == 'doorstep'
+            ? '${_addressController.text}, ${_cityController.text}'
+            : _shippingMethod == 'delivery'
+                ? '${_addressController.text}, ${_cityController.text}'
+                : null,
       );
 
       final orderId = orderResponse['order_id'] ?? orderResponse['id'];
@@ -182,22 +384,31 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         Toast.success(context, 'Order placed! Pay on delivery.');
       }
 
-      // Create delivery package if pickup
-      if (_shippingMethod == 'pickup' &&
-          _selectedLocationId != null &&
+      // Create delivery package if pickup or doorstep
+      if ((_shippingMethod == 'pickup' || _shippingMethod == 'doorstep') &&
           Config.pickupMtaaniOriginId.isNotEmpty) {
-        try {
-          await _apiService.createDeliveryPackage(
-            orderId: orderId,
-            originId: Config.pickupMtaaniOriginId,
-            destinationId: _selectedLocationId!,
-            recipientName:
-                '${_firstNameController.text} ${_lastNameController.text}',
-            recipientPhone: phoneNumber,
-            description: 'Order #$orderId - ${cart.items.length} items',
-          );
-        } catch (e) {
-          debugPrint('Delivery package creation failed: $e');
+        final destinationId = _shippingMethod == 'pickup'
+            ? _selectedAgentId
+            : _selectedDoorstepId;
+
+        if (destinationId != null) {
+          try {
+            await _apiService.createDeliveryPackage(
+              orderId: orderId,
+              originId: _originId ?? Config.pickupMtaaniOriginId,
+              destinationId: destinationId,
+              recipientName:
+                  '${_firstNameController.text} ${_lastNameController.text}',
+              recipientPhone: phoneNumber,
+              description: 'Order #$orderId - ${cart.items.length} items',
+              type: _shippingMethod == 'pickup' ? 'agent' : 'doorstep',
+              deliveryAddress: _shippingMethod == 'doorstep'
+                  ? '${_addressController.text}, ${_cityController.text}'
+                  : null,
+            );
+          } catch (e) {
+            debugPrint('Delivery package creation failed: $e');
+          }
         }
       }
 
@@ -328,7 +539,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
 
     final shippingFee =
-        _shippingMethod == 'pickup' ? (_deliveryFee ?? 0) : 250.0;
+        (_shippingMethod == 'pickup' || _shippingMethod == 'doorstep')
+            ? (_deliveryFee ?? 0)
+            : 250.0;
     final total = cart.totalAmount + shippingFee;
 
     return Scaffold(
@@ -410,68 +623,153 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       children: [
                         Expanded(
                           child: _ShippingMethodOption(
-                            icon: LucideIcons.truck,
-                            label: 'Home Delivery',
-                            isSelected: _shippingMethod == 'delivery',
-                            onTap: () =>
-                                setState(() => _shippingMethod = 'delivery'),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _ShippingMethodOption(
                             icon: LucideIcons.mapPin,
-                            label: 'Pickup Mtaani',
+                            label: 'Pickup Station',
                             isSelected: _shippingMethod == 'pickup',
                             onTap: () =>
                                 setState(() => _shippingMethod = 'pickup'),
                           ),
                         ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _ShippingMethodOption(
+                            icon: LucideIcons.home,
+                            label: 'Door Delivery',
+                            isSelected: _shippingMethod == 'doorstep',
+                            onTap: () =>
+                                setState(() => _shippingMethod = 'doorstep'),
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
-                    if (_shippingMethod == 'delivery') ...[
-                      TextFormField(
-                        controller: _addressController,
-                        decoration: const InputDecoration(
-                          labelText: 'Delivery Address',
-                          hintText: 'Street, Building, Apartment',
-                        ),
-                        validator: (v) =>
-                            v?.isEmpty ?? true ? 'Required' : null,
+
+                    // Common Area Selection
+                    DropdownButtonFormField<String>(
+                      value: _selectedAreaId,
+                      decoration: InputDecoration(
+                        labelText: 'Select Area / Region',
+                        suffixIcon: _isLoadingLocations
+                            ? const Padding(
+                                padding: EdgeInsets.all(12.0),
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              )
+                            : null,
                       ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _cityController,
-                        decoration: const InputDecoration(
-                          labelText: 'City',
-                          hintText: 'Nairobi',
-                        ),
-                        validator: (v) =>
-                            v?.isEmpty ?? true ? 'Required' : null,
-                      ),
-                    ] else ...[
+                      items: _areas.map((area) {
+                        return DropdownMenuItem<String>(
+                          value: area['id'].toString(),
+                          child: Text(area['name'] ?? ''),
+                        );
+                      }).toList(),
+                      onChanged: _isLoadingLocations
+                          ? null
+                          : (value) {
+                              setState(() {
+                                _selectedAreaId = value;
+                                _selectedLocationId = null;
+                                _selectedAgentId = null;
+                                _selectedDoorstepId = null;
+                                _deliveryFee = null;
+                              });
+                              if (value != null) {
+                                if (_shippingMethod == 'pickup') {
+                                  _loadLocationsByArea(value);
+                                } else if (_shippingMethod == 'doorstep') {
+                                  _loadDoorstepDestinations(value);
+                                }
+                              } else {
+                                // Clear locations when area is deselected
+                                setState(() {
+                                  _locations = [];
+                                  _doorstepDestinations = [];
+                                });
+                              }
+                            },
+                      validator: (v) =>
+                          v == null ? 'Please select an area' : null,
+                    ),
+                    const SizedBox(height: 16),
+
+                    if (_shippingMethod == 'pickup') ...[
                       DropdownButtonFormField<String>(
                         value: _selectedLocationId,
+                        isExpanded: true,
                         decoration: const InputDecoration(
-                          labelText: 'Select Pickup Location',
+                          labelText: 'Select Pickup Point',
                         ),
-                        items: _pickupLocations.map((loc) {
+                        items: _locations.map((loc) {
                           return DropdownMenuItem<String>(
-                            value: loc['id'] as String,
+                            value: loc['id']?.toString(),
                             child: Text(
-                                '${loc['name']} ${loc['town'] != null ? '(${loc['town']})' : ''}'),
+                              loc['name'] ?? loc['agent_location'] ?? '',
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           );
                         }).toList(),
-                        onChanged: _isLoadingLocations
-                            ? null
-                            : (value) {
-                                if (value != null) {
-                                  _calculateDeliveryFee(value);
-                                }
-                              },
+                        onChanged:
+                            _selectedAreaId == null || _isLoadingLocations
+                                ? null
+                                : (value) {
+                                    if (value != null) {
+                                      setState(() {
+                                        _selectedLocationId = value;
+                                        _selectedAgentId = null;
+                                        _deliveryFee = null;
+                                      });
+                                      _loadAgents(value);
+                                    }
+                                  },
                         validator: (v) =>
-                            v == null ? 'Please select a location' : null,
+                            v == null ? 'Please select a pickup point' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        value: _selectedAgentId,
+                        isExpanded: true,
+                        decoration: InputDecoration(
+                          labelText: 'Select Pickup Agent',
+                          suffixIcon: _isLoadingAgents
+                              ? const Padding(
+                                  padding: EdgeInsets.all(12.0),
+                                  child: SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                )
+                              : null,
+                        ),
+                        items: _agents.map((agent) {
+                          return DropdownMenuItem<String>(
+                            value: agent['id']?.toString(),
+                            child: Text(
+                              agent['business_name'] ?? '',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          );
+                        }).toList(),
+                        onChanged:
+                            _selectedLocationId == null || _isLoadingAgents
+                                ? null
+                                : (value) {
+                                    if (value != null) {
+                                      setState(() {
+                                        _selectedAgentId = value;
+                                      });
+                                      _calculateDeliveryFee(value, 'agent');
+                                    }
+                                  },
+                        validator: (v) =>
+                            v == null ? 'Please select a pickup agent' : null,
                       ),
                       const SizedBox(height: 8),
                       Text(
@@ -483,6 +781,55 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               .onSurface
                               .withOpacity(0.5),
                         ),
+                      ),
+                    ] else if (_shippingMethod == 'doorstep') ...[
+                      DropdownButtonFormField<String>(
+                        value: _selectedDoorstepId,
+                        isExpanded: true,
+                        decoration: InputDecoration(
+                          labelText: 'Select Doorstep Destination',
+                          suffixIcon: _isLoadingDoorstepDestinations
+                              ? const Padding(
+                                  padding: EdgeInsets.all(12.0),
+                                  child: SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                )
+                              : null,
+                        ),
+                        items: _doorstepDestinations.map((dest) {
+                          return DropdownMenuItem<String>(
+                            value: dest['id']?.toString(),
+                            child: Text(dest['name'] ?? ''),
+                          );
+                        }).toList(),
+                        onChanged: _selectedAreaId == null ||
+                                _isLoadingDoorstepDestinations
+                            ? null
+                            : (value) {
+                                if (value != null) {
+                                  setState(() {
+                                    _selectedDoorstepId = value;
+                                  });
+                                  _calculateDeliveryFee(value, 'doorstep');
+                                }
+                              },
+                        validator: (v) =>
+                            v == null ? 'Please select a destination' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _addressController,
+                        decoration: const InputDecoration(
+                          labelText: 'Specific Address Details',
+                          hintText: 'House No, Street, Landmark',
+                        ),
+                        validator: (v) =>
+                            v?.isEmpty ?? true ? 'Required' : null,
                       ),
                     ],
                   ],
@@ -635,7 +982,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           ),
                         ),
                         Text(
-                          _shippingMethod == 'pickup'
+                          (_shippingMethod == 'pickup' ||
+                                  _shippingMethod == 'doorstep')
                               ? (_isCalculatingFee
                                   ? 'Calculating...'
                                   : currencyFormat.format(shippingFee))
@@ -776,20 +1124,33 @@ class _ShippingMethodOption extends StatelessWidget {
         decoration: BoxDecoration(
           border: Border.all(
             color: isSelected
-                ? Theme.of(context).colorScheme.primary
-                : Theme.of(context).colorScheme.outline,
+                ? Theme.of(context).colorScheme.tertiary
+                : Theme.of(context).colorScheme.outline.withOpacity(0.5),
             width: isSelected ? 2 : 1,
           ),
           borderRadius: BorderRadius.circular(12),
+          color: isSelected
+              ? Theme.of(context).colorScheme.tertiary.withOpacity(0.05)
+              : null,
         ),
         child: Column(
           children: [
-            Icon(icon, size: 24),
+            Icon(
+              icon,
+              color: isSelected
+                  ? Theme.of(context).colorScheme.tertiary
+                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              size: 28,
+            ),
             const SizedBox(height: 8),
             Text(
               label,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 12),
+              style: TextStyle(
+                color: isSelected
+                    ? Theme.of(context).colorScheme.tertiary
+                    : Theme.of(context).colorScheme.onSurface,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
             ),
           ],
         ),
@@ -821,20 +1182,33 @@ class _PaymentMethodOption extends StatelessWidget {
         decoration: BoxDecoration(
           border: Border.all(
             color: isSelected
-                ? Theme.of(context).colorScheme.primary
-                : Theme.of(context).colorScheme.outline,
+                ? Theme.of(context).colorScheme.tertiary
+                : Theme.of(context).colorScheme.outline.withOpacity(0.5),
             width: isSelected ? 2 : 1,
           ),
           borderRadius: BorderRadius.circular(12),
+          color: isSelected
+              ? Theme.of(context).colorScheme.tertiary.withOpacity(0.05)
+              : null,
         ),
         child: Column(
           children: [
-            Icon(icon, size: 24),
+            Icon(
+              icon,
+              color: isSelected
+                  ? Theme.of(context).colorScheme.tertiary
+                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              size: 28,
+            ),
             const SizedBox(height: 8),
             Text(
               label,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 12),
+              style: TextStyle(
+                color: isSelected
+                    ? Theme.of(context).colorScheme.tertiary
+                    : Theme.of(context).colorScheme.onSurface,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
             ),
           ],
         ),

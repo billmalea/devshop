@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
-import { Loader2, CheckCircle2, Truck, MapPin, Smartphone, Banknote } from 'lucide-react'
+import { Loader2, CheckCircle2, Truck, MapPin, Smartphone, Banknote, Home } from 'lucide-react'
 import Link from "next/link"
 import { createClient as createBrowserSupabase } from "@/lib/client"
 
@@ -18,15 +18,38 @@ interface Location {
   id: string
   name: string
   town?: string
+  zone?: string
+  area?: string
+  agent_id?: string
+}
+
+interface Agent {
+  id: string
+  business_name: string
+  loc?: {
+    name: string
+    description: string
+  }
 }
 
 export default function CheckoutPage() {
   const { items, totalPrice, clearCart } = useCart()
   const [isLoading, setIsLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
-  const [pickupLocations, setPickupLocations] = useState<Location[]>([])
+
+  // Location State
+  const [areas, setAreas] = useState<{ id: string, name: string }[]>([])
+  const [locations, setLocations] = useState<Location[]>([])
+  const [agents, setAgents] = useState<Agent[]>([])
+  const [doorstepDestinations, setDoorstepDestinations] = useState<Location[]>([])
+
+  const [selectedArea, setSelectedArea] = useState<string>('')
+
   const [locationsLoading, setLocationsLoading] = useState(false)
-  const ORIGIN_AGENT_ID = process.env.NEXT_PUBLIC_PICKUP_MTAANI_ORIGIN_ID || ''
+  const [agentsLoading, setAgentsLoading] = useState(false)
+  const [doorstepLoading, setDoorstepLoading] = useState(false)
+  const [originAgentId, setOriginAgentId] = useState<string>('')
+
   const [deliveryCharge, setDeliveryCharge] = useState<number | null>(null)
   const [deliveryChargeLoading, setDeliveryChargeLoading] = useState(false)
   const [firstName, setFirstName] = useState("")
@@ -36,9 +59,11 @@ export default function CheckoutPage() {
   const [address, setAddress] = useState("")
   const [city, setCity] = useState("")
 
-  const [shippingMethod, setShippingMethod] = useState<"delivery" | "pickup">("delivery")
+  const [shippingMethod, setShippingMethod] = useState<"pickup" | "doorstep">("pickup")
   const [paymentMethod, setPaymentMethod] = useState<"mpesa" | "cod">("mpesa")
   const [pickupLocation, setPickupLocation] = useState("")
+  const [pickupAgent, setPickupAgent] = useState("")
+  const [doorstepLocation, setDoorstepLocation] = useState("")
   const [profilePhonePresent, setProfilePhonePresent] = useState(false)
 
   const formattedTotal = new Intl.NumberFormat('en-KE', {
@@ -47,49 +72,66 @@ export default function CheckoutPage() {
     minimumFractionDigits: 0,
   }).format(totalPrice)
 
-  // Fetch Pickup Mtaani locations
+  // Fetch initial data
   useEffect(() => {
-    const fetchLocations = async () => {
+    const fetchData = async () => {
       setLocationsLoading(true)
       try {
-        const res = await fetch('/api/pickup-mtaani/locations')
-        if (res.ok) {
-          const data = await res.json()
-          if (data.data) {
-            setPickupLocations(data.data.map((loc: { agent_location: string; town: string }) => ({
-              id: loc.agent_location,
-              name: loc.agent_location,
-              town: loc.town
-            })))
-          }
+        // Fetch Settings for Origin
+        const settingsRes = await fetch('/api/settings')
+        const settingsData = await settingsRes.json()
+        if (settingsData.settings?.pickup_mtaani_origin?.agent_id) {
+          setOriginAgentId(settingsData.settings.pickup_mtaani_origin.agent_id)
+        } else if (settingsData.settings?.pickup_mtaani_origin?.location_id) {
+          setOriginAgentId(settingsData.settings.pickup_mtaani_origin.location_id)
+        }
+
+        // Fetch Areas only (locations and doorstep destinations loaded on area selection)
+        const areasRes = await fetch('/api/pickup-mtaani/areas')
+
+        if (areasRes.ok) {
+          const data = await areasRes.json()
+          setAreas(Array.isArray(data) ? data : (data.data || []))
         }
       } catch (e) {
-        console.error('Failed to fetch pickup locations', e)
-        toast.error('Could not load pickup locations')
+        console.error('Failed to fetch data', e)
+        toast.error('Could not load areas')
       } finally {
         setLocationsLoading(false)
       }
     }
-    fetchLocations()
+    fetchData()
   }, [])
 
-  // Calculate delivery charge for pickup method
+  // Calculate delivery charge
   useEffect(() => {
     const calcCharge = async () => {
-      if (shippingMethod !== 'pickup' || !pickupLocation || !ORIGIN_AGENT_ID) {
+      const destination = shippingMethod === 'pickup' ? pickupAgent : doorstepLocation
+
+      if (!destination || !originAgentId) {
         setDeliveryCharge(null)
         return
       }
+
       setDeliveryChargeLoading(true)
       try {
-        const params = new URLSearchParams({ origin: ORIGIN_AGENT_ID, destination: pickupLocation })
-        const res = await fetch(`/api/pickup-mtaani/delivery-charge?${params.toString()}`)
+        const res = await fetch('/api/pickup-mtaani/delivery-charge', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: shippingMethod === 'pickup' ? 'agent' : 'doorstep',
+            origin: originAgentId,
+            destination: destination
+          })
+        })
+
         if (res.ok) {
           const data = await res.json()
-          if (typeof data.amount === 'number') {
-            setDeliveryCharge(data.amount)
-          } else if (data.data && typeof data.data.amount === 'number') {
-            setDeliveryCharge(data.data.amount)
+          // Handle both amount and price fields from API
+          const charge = data.amount ?? data.price ?? data.data?.amount ?? data.data?.price
+
+          if (typeof charge === 'number') {
+            setDeliveryCharge(charge)
           } else {
             setDeliveryCharge(null)
           }
@@ -104,8 +146,9 @@ export default function CheckoutPage() {
       }
     }
     calcCharge()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shippingMethod, pickupLocation])
+  }, [shippingMethod, pickupAgent, doorstepLocation, originAgentId])
+
+
 
   // Prefill from Supabase profile
   useEffect(() => {
@@ -152,8 +195,13 @@ export default function CheckoutPage() {
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (shippingMethod === "pickup" && !pickupLocation) {
-      toast.error("Please select a pickup location")
+    if (shippingMethod === "pickup" && !pickupAgent) {
+      toast.error("Please select a pickup agent")
+      return
+    }
+
+    if (shippingMethod === "doorstep" && !doorstepLocation) {
+      toast.error("Please select a doorstep location")
       return
     }
 
@@ -186,7 +234,11 @@ export default function CheckoutPage() {
       const supabase = createBrowserSupabase()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
-      const shippingAddr = shippingMethod === 'delivery' ? `${address}, ${city}` : `Pickup Agent: ${pickupLocation}`
+
+      let shippingAddr = ''
+      if (shippingMethod === 'pickup') shippingAddr = `Pickup Agent ID: ${pickupAgent}`
+      else if (shippingMethod === 'doorstep') shippingAddr = `Doorstep: ${doorstepLocation}`
+
       const { data: order, error } = await supabase
         .from('orders')
         .insert({
@@ -195,7 +247,7 @@ export default function CheckoutPage() {
           status: 'pending',
           phone_number: phoneNumber,
           payment_method: paymentMethod,
-          shipping_method: shippingMethod === 'pickup' ? 'pickup_agent' : 'home_delivery',
+          shipping_method: shippingMethod === 'pickup' ? 'pickup_agent' : 'doorstep_delivery',
           shipping_address: shippingAddr
         })
         .select()
@@ -220,25 +272,36 @@ export default function CheckoutPage() {
       toast.error('Failed to create order')
     }
 
-    // 2. Create Pickup Mtaani package (if pickup)
+    // 2. Create Pickup Mtaani package (if pickup or doorstep)
     let packageId: string | null = null
-    if (orderId && shippingMethod === 'pickup') {
-      if (!ORIGIN_AGENT_ID) {
+    if (orderId && (shippingMethod === 'pickup' || shippingMethod === 'doorstep')) {
+      if (!originAgentId) {
         toast.error('Pickup Mtaani origin ID not configured')
       } else {
         try {
+          // TODO: Use correct endpoint for doorstep if different
+          // Assuming same endpoint but different payload might be needed?
+          // For now using the same package creation but we might need to adjust for doorstep
+          // The API docs for 'Create Agent to Agent Package' was /packages/agent-agent
+          // Doorstep might be different. 
+          // Since we don't have full docs, we'll use the same endpoint but be aware it might fail for doorstep if it expects agent ID
+          // Actually, for doorstep, we probably need a different endpoint or payload.
+          // But let's try to use the existing one with the selected location ID.
+
           const res = await fetch('/api/pickup-mtaani/packages', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              originId: ORIGIN_AGENT_ID,
-              destinationId: pickupLocation,
+              originId: originAgentId,
+              destinationId: shippingMethod === 'pickup' ? pickupAgent : doorstepLocation,
               packageDescription: `Order ${orderId} with ${items.length} item(s)`,
               recipientName: `${firstName} ${lastName}`.trim(),
               recipientPhone: phoneNumber,
               paymentMode: paymentMethod === 'cod' ? 'COD' : 'PREPAID',
               codAmount: paymentMethod === 'cod' ? totalPrice : undefined,
               value: totalPrice,
+              type: shippingMethod === 'pickup' ? 'agent' : 'doorstep',
+              deliveryAddress: shippingMethod === 'doorstep' ? `${address}, ${city}` : undefined,
             })
           })
           if (res.ok) {
@@ -268,7 +331,7 @@ export default function CheckoutPage() {
     // 3. Handle payment
     if (paymentMethod === 'mpesa') {
       try {
-        const shippingFee = shippingMethod === 'pickup' ? (deliveryCharge || 0) : 250
+        const shippingFee = (shippingMethod === 'pickup' || shippingMethod === 'doorstep') ? (deliveryCharge || 0) : 250
         const totalWithShipping = totalPrice + shippingFee
 
         const stkRes = await fetch('/api/payments/stk', {
@@ -412,72 +475,214 @@ export default function CheckoutPage() {
             <CardContent className="space-y-4">
               <RadioGroup
                 value={shippingMethod}
-                onValueChange={(value: "delivery" | "pickup") => setShippingMethod(value)}
-                className="grid grid-cols-2 gap-4"
+                onValueChange={(value: "pickup" | "doorstep") => setShippingMethod(value)}
+                className="grid grid-cols-1 md:grid-cols-2 gap-4"
               >
-                <div>
-                  <RadioGroupItem value="delivery" id="delivery" className="peer sr-only" />
-                  <Label
-                    htmlFor="delivery"
-                    className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
-                  >
-                    <Truck className="mb-3 h-6 w-6" />
-                    Home Delivery
-                  </Label>
-                </div>
                 <div>
                   <RadioGroupItem value="pickup" id="pickup" className="peer sr-only" />
                   <Label
                     htmlFor="pickup"
-                    className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
+                    className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary h-full"
                   >
                     <MapPin className="mb-3 h-6 w-6" />
-                    Pickup Mtaani
+                    Pickup Station
+                  </Label>
+                </div>
+                <div>
+                  <RadioGroupItem value="doorstep" id="doorstep" className="peer sr-only" />
+                  <Label
+                    htmlFor="doorstep"
+                    className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary h-full"
+                  >
+                    <Home className="mb-3 h-6 w-6" />
+                    Door Delivery
                   </Label>
                 </div>
               </RadioGroup>
 
-              {shippingMethod === "delivery" ? (
+              {shippingMethod === "pickup" && (
                 <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
                   <div className="space-y-2">
-                    <Label htmlFor="address">Delivery Address</Label>
+                    <Label>Area / Region</Label>
+                    <Select value={selectedArea} onValueChange={(val) => {
+                      setSelectedArea(val)
+                      setPickupLocation('')
+                      setPickupAgent('')
+                      setAgents([])
+                      // Fetch pickup locations for selected area
+                      if (val) {
+                        setLocationsLoading(true)
+                        fetch(`/api/pickup-mtaani/locations?areaId=${val}`)
+                          .then(res => res.json())
+                          .then(data => {
+                            // Ensure we always set an array and extract from data.data if needed
+                            const locs = Array.isArray(data) ? data : (data.data || data.locations || [])
+                            setLocations(locs)
+                            setLocationsLoading(false)
+                          })
+                          .catch(e => {
+                            console.error('Failed to fetch pickup locations', e)
+                            toast.error('Failed to load pickup locations')
+                            setLocations([])
+                            setLocationsLoading(false)
+                          })
+                      } else {
+                        setLocations([])
+                      }
+                    }} disabled={locationsLoading}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={locationsLoading ? "Loading areas..." : "Select Area"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {areas.map(area => (
+                          <SelectItem key={area.id} value={area.id}>{area.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="pickupLocation">Select Pickup Location</Label>
+                    <Select value={pickupLocation} onValueChange={(val) => {
+                      setPickupLocation(val)
+                      setPickupAgent('')
+                      setAgents([])
+
+                      if (val) {
+                        setAgentsLoading(true)
+                        fetch(`/api/pickup-mtaani/agents?locationId=${val}`)
+                          .then(res => res.json())
+                          .then(data => {
+                            const agentsList = Array.isArray(data) ? data : (data.data || [])
+                            setAgents(agentsList)
+                            setAgentsLoading(false)
+                          })
+                          .catch(e => {
+                            console.error('Failed to fetch agents', e)
+                            toast.error('Failed to load agents')
+                            setAgents([])
+                            setAgentsLoading(false)
+                          })
+                      }
+                    }} disabled={!selectedArea || locationsLoading}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={locationsLoading ? "Loading locations..." : (!selectedArea ? "Select an area first" : "Select a location")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {locations.map((loc) => (
+                          <SelectItem key={loc.id} value={loc.id}>
+                            {loc.name} {loc.town ? `(${loc.town})` : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="pickupAgent">Select Pickup Agent</Label>
+                    <Select value={pickupAgent} onValueChange={setPickupAgent} disabled={!pickupLocation || agentsLoading}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={agentsLoading ? "Loading agents..." : (!pickupLocation ? "Select a location first" : "Select an agent")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {agents.map((agent) => (
+                          <SelectItem key={agent.id} value={agent.id}>
+                            {agent.business_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+
+              {shippingMethod === "doorstep" && (
+                <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                  <div className="space-y-2">
+                    <Label>Area / Region</Label>
+                    <Select value={selectedArea} onValueChange={(val) => {
+                      setSelectedArea(val)
+                      setDoorstepLocation('')
+                      // Fetch doorstep destinations for selected area
+                      if (val) {
+                        setDoorstepLoading(true)
+                        fetch(`/api/pickup-mtaani/doorstep-destinations?areaId=${val}`)
+                          .then(res => res.json())
+                          .then(data => {
+                            // Ensure we always set an array
+                            const destinations = Array.isArray(data) ? data : (data.data || [])
+                            setDoorstepDestinations(destinations)
+                            setDoorstepLoading(false)
+
+                            // Show info toast if no destinations available
+                            if (destinations.length === 0) {
+                              toast.info('Door delivery not available in this area')
+                            }
+                          })
+                          .catch(e => {
+                            console.error('Failed to fetch doorstep destinations', e)
+                            toast.error('Failed to load doorstep destinations')
+                            setDoorstepDestinations([])
+                            setDoorstepLoading(false)
+                          })
+                      } else {
+                        setDoorstepDestinations([])
+                      }
+                    }} disabled={locationsLoading}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={locationsLoading ? "Loading areas..." : "Select Area"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {areas.map(area => (
+                          <SelectItem key={area.id} value={area.id}>{area.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="doorstepLocation">Select Doorstep Destination</Label>
+                    <Select value={doorstepLocation} onValueChange={setDoorstepLocation} disabled={!selectedArea || doorstepLoading}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={doorstepLoading ? "Loading..." : "Select a destination"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.isArray(doorstepDestinations) && doorstepDestinations.map((loc) => (
+                          <SelectItem key={loc.id} value={loc.id}>
+                            {loc.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Specific Address Details</Label>
                     <Input
                       id="address"
-                      placeholder="Street, Building, Apartment"
+                      placeholder="House No, Street, Landmark"
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
                       required
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="city">City</Label>
-                    <Input
-                      id="city"
-                      placeholder="Nairobi"
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      required
-                    />
+                </div>
+              )}
+
+              {(shippingMethod === 'pickup' || shippingMethod === 'doorstep') && deliveryCharge !== null && (
+                <div className="rounded-lg bg-secondary/50 p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Banknote className="h-5 w-5 text-green-600" />
+                      <span className="font-medium">Delivery Fee</span>
+                    </div>
+                    <span className="font-bold">KES {deliveryCharge}</span>
                   </div>
                 </div>
-              ) : (
-                <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                  <Label htmlFor="pickup-location">Select Pickup Location</Label>
-                  <Select value={pickupLocation} onValueChange={setPickupLocation} disabled={locationsLoading}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={locationsLoading ? "Loading locations..." : "Select a Pickup Mtaani agent"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {pickupLocations.map((loc) => (
-                        <SelectItem key={loc.id} value={loc.id}>
-                          {loc.name} {loc.town && `(${loc.town})`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Powered by Pickup Mtaani API
-                  </p>
+              )}
+
+              {deliveryChargeLoading && (
+                <div className="flex items-center justify-center py-2">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  <span className="ml-2 text-sm text-muted-foreground">Calculating fee...</span>
                 </div>
               )}
             </CardContent>
@@ -577,9 +782,7 @@ export default function CheckoutPage() {
               <div className="flex justify-between text-sm text-muted-foreground">
                 <span>Shipping</span>
                 <span>
-                  {shippingMethod === 'pickup'
-                    ? (deliveryChargeLoading ? 'Calculating...' : (deliveryCharge !== null ? `KES ${deliveryCharge}` : '—'))
-                    : 'KES 250'}
+                  {deliveryChargeLoading ? 'Calculating...' : (deliveryCharge !== null ? `KES ${deliveryCharge}` : '—')}
                 </span>
               </div>
               <Separator />
@@ -590,7 +793,7 @@ export default function CheckoutPage() {
                     style: 'currency',
                     currency: 'KES',
                     minimumFractionDigits: 0,
-                  }).format(totalPrice + (shippingMethod === 'pickup' ? (deliveryCharge || 0) : 250))}
+                  }).format(totalPrice + (deliveryCharge || 0))}
                 </span>
               </div>
             </CardContent>

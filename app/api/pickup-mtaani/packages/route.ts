@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     const packageId = searchParams.get('id')
 
     const api = getPickupMtaaniAPI()
-    
+
     if (packageId) {
       const packageData = await api.getAgentPackage(packageId)
       return NextResponse.json(packageData)
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    
+
     const {
       originId,
       destinationId,
@@ -37,7 +37,9 @@ export async function POST(request: NextRequest) {
       weight,
       value,
       paymentMode,
-      codAmount
+      codAmount,
+      type, // 'agent' or 'doorstep'
+      deliveryAddress // Required for doorstep
     } = body
 
     if (!originId || !destinationId || !packageDescription || !recipientName || !recipientPhone) {
@@ -48,18 +50,41 @@ export async function POST(request: NextRequest) {
     }
 
     const api = getPickupMtaaniAPI()
-    const packageData = await api.createAgentPackage({
-      origin_id: originId,
-      destination_id: destinationId,
-      package_description: packageDescription,
-      recipient_name: recipientName,
-      recipient_phone: recipientPhone,
-      weight,
-      value,
-      payment_mode: paymentMode || 'PREPAID',
-      cod_amount: codAmount
-    })
-    
+    let packageData
+
+    if (type === 'doorstep') {
+      if (!deliveryAddress) {
+        return NextResponse.json(
+          { error: 'Delivery address is required for doorstep packages' },
+          { status: 400 }
+        )
+      }
+      packageData = await api.createDoorstepPackage({
+        origin_id: originId,
+        destination_id: destinationId,
+        package_description: packageDescription,
+        recipient_name: recipientName,
+        recipient_phone: recipientPhone,
+        weight,
+        value,
+        payment_mode: paymentMode || 'PREPAID',
+        cod_amount: codAmount,
+        delivery_address: deliveryAddress
+      })
+    } else {
+      packageData = await api.createAgentPackage({
+        origin_id: originId,
+        destination_id: destinationId,
+        package_description: packageDescription,
+        recipient_name: recipientName,
+        recipient_phone: recipientPhone,
+        weight,
+        value,
+        payment_mode: paymentMode || 'PREPAID',
+        cod_amount: codAmount
+      })
+    }
+
     return NextResponse.json(packageData)
   } catch (error) {
     console.error('Failed to create package:', error)

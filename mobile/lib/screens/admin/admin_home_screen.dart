@@ -8,6 +8,7 @@ import 'package:mobile/screens/admin/admin_deliveries_screen.dart';
 import 'package:mobile/screens/admin/admin_inventory_screen.dart';
 import 'package:mobile/screens/admin/admin_users_screen.dart';
 import 'package:mobile/screens/admin/admin_reports_screen.dart';
+import 'package:mobile/screens/admin/admin_settings_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AdminHomeScreen extends StatefulWidget {
@@ -259,6 +260,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                     },
                   ),
                   const SizedBox(height: 12),
+                  const SizedBox(height: 12),
                   _AdminMenuItem(
                     title: 'Reports',
                     subtitle: 'Analytics and insights',
@@ -268,6 +270,20 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                         context,
                         MaterialPageRoute(
                           builder: (context) => const AdminReportsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _AdminMenuItem(
+                    title: 'Settings',
+                    subtitle: 'Configure app settings',
+                    icon: LucideIcons.settings,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AdminSettingsScreen(),
                         ),
                       );
                     },

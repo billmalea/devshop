@@ -4,17 +4,44 @@ import 'package:mobile/config.dart';
 
 class ApiService {
   final String _baseUrl = Config.apiBaseUrl;
+  final String _pickupMtaaniBaseUrl = Config.pickupMtaaniApiUrl;
+  final String _pickupMtaaniApiKey = Config.pickupMtaaniApiKey;
 
-  // Pickup Mtaani Integration
-  Future<List<Map<String, dynamic>>> getPickupLocations() async {
+  // Helper method to get Pickup Mtaani headers
+  Map<String, String> _pickupMtaaniHeaders() {
+    if (_pickupMtaaniApiKey.isEmpty) {
+      throw Exception('PICKUP_MTAANI_API_KEY is not configured');
+    }
+    return {
+      'apikey': _pickupMtaaniApiKey,
+      'Content-Type': 'application/json',
+    };
+  }
+
+  // Pickup Mtaani Integration - Direct API Calls
+  Future<List<Map<String, dynamic>>> getPickupLocations(
+      {String? areaId}) async {
     try {
+      final uri = Uri.parse('$_pickupMtaaniBaseUrl/locations')
+          .replace(queryParameters: {
+        if (areaId != null) 'areaId': areaId,
+      });
+
       final response = await http.get(
-        Uri.parse('$_baseUrl/delivery/locations'),
+        uri,
+        headers: _pickupMtaaniHeaders(),
       );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        return List<Map<String, dynamic>>.from(data['locations'] ?? []);
+        // Handle both array response and object with data/locations property
+        if (data is List) {
+          return List<Map<String, dynamic>>.from(data);
+        } else if (data is Map) {
+          return List<Map<String, dynamic>>.from(
+              data['data'] ?? data['locations'] ?? []);
+        }
+        return [];
       } else {
         throw Exception(
             'Failed to load pickup locations: ${response.statusCode}');
@@ -24,18 +51,128 @@ class ApiService {
     }
   }
 
+  Future<List<Map<String, dynamic>>> getPickupAgents(String locationId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_pickupMtaaniBaseUrl/agents?locationId=$locationId'),
+        headers: _pickupMtaaniHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data is List) {
+          return List<Map<String, dynamic>>.from(data);
+        } else if (data is Map) {
+          return List<Map<String, dynamic>>.from(data['data'] ?? []);
+        }
+        return [];
+      } else {
+        throw Exception('Failed to load agents: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching agents: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getPickupZones() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_pickupMtaaniBaseUrl/locations/zones'),
+        headers: _pickupMtaaniHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return List<Map<String, dynamic>>.from(data['data'] ?? []);
+      } else {
+        throw Exception('Failed to load zones: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching zones: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getPickupAreas() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_pickupMtaaniBaseUrl/locations/areas'),
+        headers: _pickupMtaaniHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data is List) {
+          return List<Map<String, dynamic>>.from(data);
+        } else if (data is Map) {
+          return List<Map<String, dynamic>>.from(data['data'] ?? []);
+        }
+        return [];
+      } else {
+        throw Exception('Failed to load areas: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching areas: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getDoorstepDestinations({
+    String? areaId,
+    String? searchKey,
+  }) async {
+    try {
+      final uri =
+          Uri.parse('$_pickupMtaaniBaseUrl/locations/doorstep-destinations')
+              .replace(queryParameters: {
+        if (areaId != null) 'areaId': areaId,
+        if (searchKey != null) 'searchKey': searchKey,
+      });
+
+      final response = await http.get(uri, headers: _pickupMtaaniHeaders());
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data is List) {
+          return List<Map<String, dynamic>>.from(data);
+        } else if (data is Map) {
+          return List<Map<String, dynamic>>.from(data['data'] ?? []);
+        }
+        return [];
+      } else {
+        throw Exception(
+            'Failed to load doorstep destinations: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching doorstep destinations: $e');
+    }
+  }
+
   Future<Map<String, dynamic>> calculateDeliveryCharge(
     String originId,
     String destinationId,
+    String type, // 'agent' or 'doorstep'
   ) async {
     try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/delivery/calculate'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'origin_id': originId,
-          'destination_id': destinationId,
-        }),
+      // Build query parameters
+      final Map<String, String> params = {};
+
+      if (type == 'doorstep') {
+        params['senderAgentID'] = originId;
+        params['doorstepDestinationID'] = destinationId;
+      } else {
+        params['senderAgentID'] = originId;
+        params['receiverAgentID'] = destinationId;
+      }
+
+      final queryString = Uri(queryParameters: params).query;
+
+      // Determine the correct endpoint based on type
+      final endpoint = type == 'doorstep'
+          ? '$_pickupMtaaniBaseUrl/delivery-charge/doorstep-package?$queryString'
+          : '$_pickupMtaaniBaseUrl/delivery-charge/agent-package?$queryString';
+
+      final response = await http.get(
+        Uri.parse(endpoint),
+        headers: _pickupMtaaniHeaders(),
       );
 
       if (response.statusCode == 200) {
@@ -55,18 +192,22 @@ class ApiService {
     required String recipientName,
     required String recipientPhone,
     required String description,
+    required String type, // 'agent' or 'doorstep'
+    String? deliveryAddress,
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$_baseUrl/delivery/create-package'),
+        Uri.parse('$_baseUrl/pickup-mtaani/packages'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'order_id': orderId,
-          'origin_id': originId,
-          'destination_id': destinationId,
-          'recipient_name': recipientName,
-          'recipient_phone': recipientPhone,
-          'description': description,
+          'originId': originId,
+          'destinationId': destinationId,
+          'recipientName': recipientName,
+          'recipientPhone': recipientPhone,
+          'packageDescription': description,
+          'type': type,
+          'deliveryAddress': deliveryAddress,
         }),
       );
 

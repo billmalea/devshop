@@ -6,11 +6,21 @@
 const PICKUP_MTAANI_API_URL = process.env.NEXT_PUBLIC_PICKUP_MTAANI_API_URL || 'https://api.pickupmtaani.com/api/v1'
 const PICKUP_MTAANI_API_KEY = process.env.PICKUP_MTAANI_API_KEY
 
-interface Location {
+export interface Location {
   id: string
   name: string
-  zone?: string
+  town: string
   area?: string
+  agent_id?: string
+}
+
+export interface Agent {
+  id: string
+  business_name: string
+  loc: {
+    name: string
+    description: string
+  }
 }
 
 interface DeliveryChargeRequest {
@@ -20,8 +30,9 @@ interface DeliveryChargeRequest {
 }
 
 interface DeliveryChargeResponse {
-  amount: number
-  currency: string
+  amount?: number
+  price?: number
+  currency?: string
 }
 
 interface AgentPackageRequest {
@@ -34,6 +45,19 @@ interface AgentPackageRequest {
   value?: number
   payment_mode: 'COD' | 'PREPAID'
   cod_amount?: number
+}
+
+interface DoorstepPackageRequest {
+  origin_id: string
+  destination_id: string
+  recipient_name: string
+  recipient_phone: string
+  package_description: string
+  weight?: number
+  value?: number
+  payment_mode: 'COD' | 'PREPAID'
+  cod_amount?: number
+  delivery_address: string
 }
 
 interface AgentPackageResponse {
@@ -120,12 +144,17 @@ class PickupMtaaniAPI {
       throw new Error(`Pickup Mtaani API Error: ${error.message || response.statusText}`)
     }
 
-    return response.json()
+    const data = await response.json()
+    return (data.data ? data.data : data) as T
   }
 
   // Locations
-  async getAgentLocations(): Promise<Location[]> {
-    return this.request<Location[]>('/locations')
+  async getAgentLocations(areaId?: string): Promise<Location[]> {
+    const params = new URLSearchParams()
+    if (areaId) params.append('areaId', areaId)
+
+    const queryString = params.toString()
+    return this.request<Location[]>(`/locations${queryString ? `?${queryString}` : ''}`)
   }
 
   async getAreas(): Promise<Location[]> {
@@ -136,11 +165,24 @@ class PickupMtaaniAPI {
     return this.request<Location[]>('/locations/zones')
   }
 
+  async getDoorstepDestinations(areaId?: string, searchKey?: string): Promise<Location[]> {
+    const params = new URLSearchParams()
+    if (areaId) params.append('areaId', areaId)
+    if (searchKey) params.append('searchKey', searchKey)
+
+    const queryString = params.toString()
+    return this.request<Location[]>(`/locations/doorstep-destinations${queryString ? `?${queryString}` : ''}`)
+  }
+
+  async getAgents(locationId: string): Promise<Agent[]> {
+    return this.request<Agent[]>(`/agents?locationId=${locationId}`)
+  }
+
   // Delivery Charges
   async getAgentPackageCharge(data: DeliveryChargeRequest): Promise<DeliveryChargeResponse> {
     const params = new URLSearchParams({
-      origin: data.origin,
-      destination: data.destination,
+      senderAgentID: data.origin,
+      receiverAgentID: data.destination,
       ...(data.weight && { weight: data.weight.toString() }),
     })
     return this.request<DeliveryChargeResponse>(`/delivery-charge/agent-package?${params}`)
@@ -148,8 +190,8 @@ class PickupMtaaniAPI {
 
   async getDoorstepPackageCharge(data: DeliveryChargeRequest): Promise<DeliveryChargeResponse> {
     const params = new URLSearchParams({
-      origin: data.origin,
-      destination: data.destination,
+      senderAgentID: data.origin,
+      doorstepDestinationID: data.destination,
       ...(data.weight && { weight: data.weight.toString() }),
     })
     return this.request<DeliveryChargeResponse>(`/delivery-charge/doorstep-package?${params}`)
@@ -158,6 +200,13 @@ class PickupMtaaniAPI {
   // Agent Packages
   async createAgentPackage(data: AgentPackageRequest): Promise<AgentPackageResponse> {
     return this.request<AgentPackageResponse>('/packages/agent-agent', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async createDoorstepPackage(data: DoorstepPackageRequest): Promise<AgentPackageResponse> {
+    return this.request<AgentPackageResponse>('/packages/doorstep', {
       method: 'POST',
       body: JSON.stringify(data),
     })
@@ -246,7 +295,6 @@ export function getPickupMtaaniAPI(): PickupMtaaniAPI {
 }
 
 export type {
-  Location,
   DeliveryChargeRequest,
   DeliveryChargeResponse,
   AgentPackageRequest,
